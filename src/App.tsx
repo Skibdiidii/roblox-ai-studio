@@ -200,7 +200,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       id: aiMsgId,
       sender: 'ai',
       content: '',
-      thinking: '',
+      thinking: '• Initializing reasoning...',
       isThinking: true,
       isStreaming: true,
       timestamp: Date.now()
@@ -209,8 +209,29 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     setMessages(prev => [...prev, userMsg, initialAiMsg]);
     setIsGenerating(true);
 
-    const isModification = Boolean(activeProject && stage >= 4 && Object.keys(activeProject.files).length > 2);
-    if (!isModification) {
+    const hasProjectFiles = Boolean(activeProject && Object.keys(activeProject.files).length > 2);
+    const lower = (prompt || '').toLowerCase().trim();
+    const isExplicitCreate = lower.startsWith('create ') ||
+      lower.startsWith('make a ') ||
+      lower.startsWith('build a ') ||
+      lower.startsWith('generate ') ||
+      lower.includes('new game') ||
+      lower.includes('simulator') ||
+      lower.includes('tycoon') ||
+      lower.includes('obby');
+
+    const isExplicitModify = hasProjectFiles && (
+      lower.includes('add ') ||
+      lower.includes('modify ') ||
+      lower.includes('update ') ||
+      lower.includes('change ') ||
+      lower.includes('fix ') ||
+      lower.includes('refactor ') ||
+      lower.includes('implement ')
+    );
+
+    const determinedMode = isExplicitModify ? 'modify' : (isExplicitCreate ? 'plan' : 'freeform');
+    if (determinedMode === 'plan') {
       setStage(2);
     }
 
@@ -224,8 +245,8 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         },
         body: JSON.stringify({
           prompt,
-          mode: isModification ? 'modify' : 'plan',
-          project: isModification ? activeProject : undefined,
+          mode: determinedMode,
+          project: isExplicitModify ? activeProject : undefined,
           attachments: attachments || [],
           provider: apiSettings.provider,
           mistralApiKey: apiSettings.mistralApiKey,
@@ -385,7 +406,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
                 ...m,
                 content: m.content
                   ? `${m.content}\n\n[Error occurred: ${err.message}]`
-                  : `Could not reach AI generation engine: ${err.message}. Please verify your Gemini API key in API Settings or try again.`,
+                  : `Could not reach AI generation engine: ${err.message}. Please verify your API key in API Settings or try again.`,
                 isThinking: false,
                 isStreaming: false
               }

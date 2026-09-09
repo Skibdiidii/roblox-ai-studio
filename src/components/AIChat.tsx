@@ -338,45 +338,55 @@ export function AIChat({
 
               {msg.sender === 'ai' && (msg.thinking || msg.isThinking) && (
                 <div className="mb-3">
-                  <button
-                    type="button"
-                    id={`btn-toggle-thinking-${msg.id}`}
-                    onClick={() => toggleThinking(msg.id)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-950/90 hover:bg-slate-950 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition-colors group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      {msg.isThinking ? (
-                        <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
-                        </div>
-                      ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                      )}
-                      <span className="flex items-center gap-1.5 font-semibold text-indigo-200 shrink-0">
-                        <Brain className="w-3.5 h-3.5 text-indigo-400" />
-                        {msg.isThinking ? 'Reasoning Live…' : 'Thought Process'}
-                      </span>
-                    </div>
+                  {(() => {
+                    const isThinkingExpanded = expandedThinking[msg.id] !== undefined
+                      ? expandedThinking[msg.id]
+                      : (msg.isThinking || !msg.content);
 
-                    <div className="flex items-center gap-1 text-[10px] text-indigo-400/80 group-hover:text-indigo-300 shrink-0 ml-2">
-                      <span>{expandedThinking[msg.id] ? 'Hide' : 'View'}</span>
-                      {expandedThinking[msg.id] ? (
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-                  </button>
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          id={`btn-toggle-thinking-${msg.id}`}
+                          onClick={() => toggleThinking(msg.id)}
+                          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-950/90 hover:bg-slate-950 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition-colors group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {msg.isThinking ? (
+                              <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                              </div>
+                            ) : (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            )}
+                            <span className="flex items-center gap-1.5 font-semibold text-indigo-200 shrink-0">
+                              <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                              {msg.isThinking ? 'Reasoning Live…' : 'Thought Process'}
+                            </span>
+                          </div>
 
-                  {expandedThinking[msg.id] && (
-                    <div className="mt-1.5 p-2.5 rounded-md bg-slate-950 border border-slate-800/90 text-[11px] text-slate-300 font-mono leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
-                      {msg.thinking || 'Synthesizing Luau architecture and logic...'}
-                      {msg.isThinking && (
-                        <span className="inline-block w-1.5 h-3 bg-indigo-400 ml-1 animate-pulse align-middle" />
-                      )}
-                    </div>
-                  )}
+                          <div className="flex items-center gap-1 text-[10px] text-indigo-400/80 group-hover:text-indigo-300 shrink-0 ml-2">
+                            <span>{isThinkingExpanded ? 'Hide' : 'View'}</span>
+                            {isThinkingExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            )}
+                          </div>
+                        </button>
+
+                        {isThinkingExpanded && (
+                          <div className="mt-1.5 p-2.5 rounded-md bg-slate-950 border border-slate-800/90 text-[11px] text-slate-300 font-mono leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                            {msg.thinking || 'Synthesizing Luau architecture and logic...'}
+                            {msg.isThinking && (
+                              <span className="inline-block w-1.5 h-3 bg-indigo-400 ml-1 animate-pulse align-middle" />
+                            )}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 

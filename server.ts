@@ -471,34 +471,42 @@ async function startServer() {
       return res.status(400).json({ error: 'Prompt or attachment is required' });
     }
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
     if (typeof (res as any).flushHeaders === 'function') {
       (res as any).flushHeaders();
     }
 
     let clientClosed = false;
-    req.on('close', () => {
-      clientClosed = true;
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        clientClosed = true;
+      }
     });
 
     const send = (event: string, data: any) => {
-      if (clientClosed) return;
+      if (clientClosed || res.writableEnded) return;
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
     };
 
     const hasActiveFiles = Boolean(project && project.files && Object.keys(project.files).length > 0);
-    const lowerPrompt = (prompt || '').toLowerCase();
+    const lowerPrompt = (prompt || '').toLowerCase().trim();
 
-    const isExplicitCreate = lowerPrompt.startsWith('create ') ||
+    const isExplicitCreate = mode === 'plan' ||
+      lowerPrompt.startsWith('create ') ||
       lowerPrompt.startsWith('make a ') ||
       lowerPrompt.startsWith('build a ') ||
       lowerPrompt.startsWith('generate ') ||
       lowerPrompt.includes('new game') ||
       lowerPrompt.includes('simulator') ||
       lowerPrompt.includes('tycoon') ||
-      lowerPrompt.includes('obby');
+      lowerPrompt.includes('obby') ||
+      lowerPrompt.includes('create game');
 
     const isExplicitModify = mode === 'modify' ||
       (hasActiveFiles && (
@@ -512,14 +520,18 @@ async function startServer() {
       ));
 
     send('thinking', {
-      thought: '• Processing request with Mistral Codestral engine...',
-      step: '• Processing request with Mistral Codestral engine...'
+      thought: '• Initializing fast reasoning engine with Mistral Codestral...',
+      step: '• Initializing fast reasoning engine with Mistral Codestral...'
     });
 
-    if (!isExplicitCreate && !isExplicitModify && (attachments?.length > 0 || !hasActiveFiles || mode === 'freeform')) {
+    if (!isExplicitCreate && !isExplicitModify) {
       send('thinking', {
-        thought: '• Analyzing query & generating fast streaming answer...',
-        step: '• Analyzing query & generating fast streaming answer...'
+        thought: '• Analyzing query requirements & Roblox engine conventions...',
+        step: '• Analyzing query requirements & Roblox engine conventions...'
+      });
+      send('thinking', {
+        thought: '• Synthesizing real-time response with Luau syntax...',
+        step: '• Synthesizing real-time response with Luau syntax...'
       });
 
       const systemContext = `You are Roblox AI Studio, an elite assistant and expert Luau engineer powered by Mistral AI.
@@ -540,10 +552,12 @@ Format code using \`\`\`luau markdown blocks.`;
             send('answer_chunk', { chunk: chunk.text });
           }
         }
-        send('thinking_done', {});
-        send('done', {});
-        res.end();
-        return;
+        if (streamedAny) {
+          send('thinking_done', {});
+          send('done', {});
+          res.end();
+          return;
+        }
       } catch (err: any) {
         console.error('Freeform streaming error:', err.message);
       }
@@ -561,6 +575,10 @@ Format code using \`\`\`luau markdown blocks.`;
       send('thinking', {
         thought: '• Inspecting active Luau codebase and preparing targeted updates...',
         step: '• Inspecting active Luau codebase and preparing targeted updates...'
+      });
+      send('thinking', {
+        thought: '• Calculating server-authoritative Luau script diffs...',
+        step: '• Calculating server-authoritative Luau script diffs...'
       });
 
       let resultData: any = null;
@@ -584,7 +602,7 @@ Respond strictly with JSON containing ONLY modified or newly created files:
     "path/to/modified_or_new_file.luau": {
       "path": "path/to/modified_or_new_file.luau",
       "name": "modified_or_new_file.luau",
-      "content": "-- Full updated file code\\n...",
+      "content": "--!strict\\nlocal Players = game:GetService(\\"Players\\")\\n...",
       "language": "luau",
       "type": "server"
     }
@@ -647,8 +665,12 @@ Respond strictly with JSON containing ONLY modified or newly created files:
     }
 
     send('thinking', {
-      thought: '• Formulating complete Roblox game architecture plan...',
-      step: '• Formulating complete Roblox game architecture plan...'
+      thought: `• Formulating game architecture and systems for: "${prompt}"...`,
+      step: `• Formulating game architecture and systems for: "${prompt}"...`
+    });
+    send('thinking', {
+      thought: '• Structuring Luau client-server boundaries, DataStores, and RemoteEvents...',
+      step: '• Structuring Luau client-server boundaries, DataStores, and RemoteEvents...'
     });
 
     let planData: any = null;
@@ -716,7 +738,7 @@ Pure JSON only.`;
     }
 
     send('thinking_done', {});
-    send('answer_chunk', { chunk: `\nArchitectural plan ready for **${planData.title}**. Review the specifications below and approve to generate the Luau code.` });
+    send('answer_chunk', { chunk: `### 🎮 Game Architecture Planned: **${planData.title}**\n\n**Concept**: ${planData.concept}\n\nReview the game loop, systems, and required Luau scripts below. Click **"Approve & Generate Files"** to build the complete codebase!` });
     send('result', { type: 'plan', plan: planData, explanation: `Architectural plan ready for "${planData.title}". Review the specifications below and approve to generate the Luau code.` });
     send('done', {});
     res.end();

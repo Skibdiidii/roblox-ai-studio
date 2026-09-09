@@ -2,6 +2,25 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.1.0',
+    date: '2026-09-09',
+    title: 'Real-Time Thinking Stream & High-Speed Mistral Codestral Engine Fix',
+    tag: 'Hotfix',
+    highlights: [
+      'Live Reasoning Stream: Live thinking process and progressive thought steps are immediately visible above generated output',
+      'High-Speed Response Streaming: Fixed SSE client lifecycle handling to stream full Luau script tokens seamlessly',
+      'Mistral Codestral Luau Synthesis: Specialized Codestral model generates typed Luau code with zero latency stalls',
+      'Dual Mode Freeform & Plan Router: Intelligent auto-routing between freeform Luau queries and multi-file game planning',
+      'Robust Fallback Pipeline: Continuous multi-tier fallback ensuring uninterrupted responses on any query'
+    ],
+    details: [
+      'Resolved the server-sent events stream interruption issue to ensure continuous token streaming directly from the Mistral Codestral engine.',
+      'Updated the thinking panel to expand by default during active reasoning, showing live step-by-step thought progress as it happens.',
+      'Refined prompt mode detection to intelligently switch between freeform Luau code answers, codebase modifications, and complete architecture plans.',
+      'Maintained full historical changelog with continuous auto-scrolling to explore all past releases.'
+    ]
+  },
+  {
     version: 'v2.0.0',
     date: '2026-09-09',
     title: 'Mistral AI Engine Integration: Codestral Luau Generation & Pixtral Multimodal Vision',
