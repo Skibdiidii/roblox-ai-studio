@@ -31,6 +31,46 @@ function resolveRobloxKey(req: express.Request): string | undefined {
   return headerKey || bodyKey || process.env.ROBLOX_OPEN_CLOUD_API_KEY;
 }
 
+function safeExtractJson<T = any>(rawText: string, fallback: T | null = null): T | null {
+  if (!rawText || typeof rawText !== 'string') return fallback;
+
+  try {
+    return JSON.parse(rawText);
+  } catch {}
+
+  const cleaned = rawText.replace(/```(?:json|luau|lua)?\s*([\s\S]*?)\s*```/g, '$1').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleaned.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      const fixed = candidate
+        .replace(/,\s*([\}\]])/g, '$1')
+        .replace(/[\u0000-\u001F]+/g, (match) => match === '\n' || match === '\r' || match === '\t' ? match : ' ');
+      try {
+        return JSON.parse(fixed);
+      } catch {}
+    }
+  }
+
+  const firstBracket = cleaned.indexOf('[');
+  const lastBracket = cleaned.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    const candidate = cleaned.slice(firstBracket, lastBracket + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch {}
+  }
+
+  return fallback;
+}
+
 function normalizeMistralModel(model?: string, hasImages?: boolean): string {
   if (hasImages) {
     return 'pixtral-12b-2409';
@@ -494,7 +534,6 @@ async function startServer() {
       }
     };
 
-    const hasActiveFiles = Boolean(project && project.files && Object.keys(project.files).length > 0);
     const lowerPrompt = (prompt || '').toLowerCase().trim();
 
     const isExplicitCreate = mode === 'plan' ||
@@ -508,23 +547,12 @@ async function startServer() {
       lowerPrompt.includes('obby') ||
       lowerPrompt.includes('create game');
 
-    const isExplicitModify = mode === 'modify' ||
-      (hasActiveFiles && (
-        lowerPrompt.includes('add ') ||
-        lowerPrompt.includes('modify ') ||
-        lowerPrompt.includes('update ') ||
-        lowerPrompt.includes('change ') ||
-        lowerPrompt.includes('fix ') ||
-        lowerPrompt.includes('refactor ') ||
-        lowerPrompt.includes('implement ')
-      ));
-
     send('thinking', {
       thought: '• Initializing fast reasoning engine with Mistral Codestral...',
       step: '• Initializing fast reasoning engine with Mistral Codestral...'
     });
 
-    if (!isExplicitCreate && !isExplicitModify) {
+    if (!isExplicitCreate) {
       send('thinking', {
         thought: '• Analyzing query requirements & Roblox engine conventions...',
         step: '• Analyzing query requirements & Roblox engine conventions...'
@@ -537,7 +565,7 @@ async function startServer() {
       const systemContext = `You are Roblox AI Studio, an elite assistant and expert Luau engineer powered by Mistral AI.
 You help users with Roblox game architecture, Luau scripting, mechanics, mathematical algorithms, client-server security, UI design, DataStores, animations, and debugging.
 Answer questions directly, clearly, concisely, and provide production-ready Luau scripts when relevant.
-Format code using \`\`\`luau markdown blocks.`;
+Format code using \`\`\`luau markdown blocks. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.`;
 
       try {
         let streamedAny = false;
@@ -566,99 +594,6 @@ Format code using \`\`\`luau markdown blocks.`;
         chunk: `### Roblox AI Assistant\n\nI received your query: "${prompt || 'Attachments analyzed'}".\n\n- **Luau Engine**: Modern strict Luau support with \`task.spawn\`, \`task.wait\`, and typed annotations.\n- **Network Architecture**: ServerScriptService owns authoritative state while StarterPlayer handles client input.\n\nLet me know if you would like me to generate specific Luau scripts or architect a complete Roblox experience!`
       });
       send('thinking_done', {});
-      send('done', {});
-      res.end();
-      return;
-    }
-
-    if (isExplicitModify && hasActiveFiles) {
-      send('thinking', {
-        thought: '• Inspecting active Luau codebase and preparing targeted updates...',
-        step: '• Inspecting active Luau codebase and preparing targeted updates...'
-      });
-      send('thinking', {
-        thought: '• Calculating server-authoritative Luau script diffs...',
-        step: '• Calculating server-authoritative Luau script diffs...'
-      });
-
-      let resultData: any = null;
-
-      try {
-        const fileSummaries = Object.entries(project.files)
-          .map(([filePath, f]: any) => `File: ${filePath}\n\`\`\`luau\n${f.content}\n\`\`\``)
-          .slice(0, 6)
-          .join('\n\n');
-
-        const modifyPrompt = `You are modifying an existing Roblox Luau project called "${project.name}".
-The user requested this change: "${prompt}".
-
-Current files in the project:
-${fileSummaries}
-
-Respond strictly with JSON containing ONLY modified or newly created files:
-{
-  "explanation": "A friendly 1-2 sentence explanation of what you updated or added.",
-  "files": {
-    "path/to/modified_or_new_file.luau": {
-      "path": "path/to/modified_or_new_file.luau",
-      "name": "modified_or_new_file.luau",
-      "content": "--!strict\\nlocal Players = game:GetService(\\"Players\\")\\n...",
-      "language": "luau",
-      "type": "server"
-    }
-  }
-}`;
-
-        const aiRes = await callUniversalAI(req, {
-          systemPrompt: 'You are an elite Roblox Luau software architect. Always output pure valid JSON without markdown wrapping.',
-          userPrompt: modifyPrompt,
-          attachments,
-          preferredModel
-        });
-
-        const rawText = aiRes.text || '';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        resultData = JSON.parse(cleanJson);
-      } catch (err: any) {
-        console.error('Streaming modify error:', err.message);
-      }
-
-      if (!resultData) {
-        const updatedFiles: Record<string, any> = {};
-        if (lowerPrompt.includes('quest') || lowerPrompt.includes('daily')) {
-          updatedFiles['ServerScriptService/Systems/QuestSystem.server.lua'] = {
-            path: 'ServerScriptService/Systems/QuestSystem.server.lua',
-            name: 'QuestSystem.server.lua',
-            language: 'luau',
-            type: 'server',
-            content: `--!strict\nlocal Players = game:GetService("Players")\nlocal activeQuests: { [Player]: { [string]: number } } = {}\nPlayers.PlayerAdded:Connect(function(player)\n    activeQuests[player] = { ["Punch100"] = 0 }\nend)\n`
-          };
-        } else if (lowerPrompt.includes('boss')) {
-          updatedFiles['ServerScriptService/Systems/BossSystem.server.lua'] = {
-            path: 'ServerScriptService/Systems/BossSystem.server.lua',
-            name: 'BossSystem.server.lua',
-            language: 'luau',
-            type: 'server',
-            content: `--!strict\nlocal Players = game:GetService("Players")\nlocal Boss = { Name = "Demon Warlord", MaxHealth = 5000, CurrentHealth = 5000 }\n`
-          };
-        } else {
-          updatedFiles['ServerScriptService/Systems/CustomFeature.server.lua'] = {
-            path: 'ServerScriptService/Systems/CustomFeature.server.lua',
-            name: 'CustomFeature.server.lua',
-            language: 'luau',
-            type: 'server',
-            content: `--!strict\nlocal Players = game:GetService("Players")\nprint("[Server] Feature loaded: ${prompt.replace(/"/g, '')}")\n`
-          };
-        }
-        resultData = {
-          explanation: `I've incorporated your request: "${prompt}". Updated files have been generated with server-authoritative Luau architecture.`,
-          files: updatedFiles
-        };
-      }
-
-      send('thinking_done', {});
-      send('answer_chunk', { chunk: `\n${resultData.explanation || 'Project files successfully updated.'}` });
-      send('result', { type: 'modify', files: resultData.files, explanation: resultData.explanation });
       send('done', {});
       res.end();
       return;
@@ -695,15 +630,13 @@ Generate a complete JSON game plan adhering strictly to this JSON format:
 Pure JSON only.`;
 
       const aiRes = await callUniversalAI(req, {
-        systemPrompt: 'You are an expert Roblox game developer. Output pure valid JSON only without markdown tags.',
+        systemPrompt: 'You are an expert Roblox game developer. Output pure valid JSON only without markdown tags. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: planPrompt,
         attachments,
         preferredModel
       });
 
-      const rawText = aiRes.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      planData = JSON.parse(cleanJson);
+      planData = safeExtractJson(aiRes.text || '');
     } catch (err: any) {
       console.error('Streaming plan error:', err.message);
     }
@@ -752,14 +685,14 @@ Pure JSON only.`;
 
     try {
       const response = await callUniversalAI(req, {
-        systemPrompt: 'You are an expert Roblox Luau game architect and developer. Output pure valid JSON format only.',
+        systemPrompt: 'You are an expert Roblox Luau game architect and developer. Output pure valid JSON format only. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: `A user wants to build this Roblox game: "${prompt}".
 
 Generate a complete JSON game plan adhering strictly to this JSON format:
 {
   "title": "Game Title",
   "genre": "Genre",
-  "concept": "High-level concept description",
+  "concept": "Concept description",
   "gameplayLoop": [
     "Step 1...",
     "Step 2...",
@@ -800,10 +733,10 @@ Ensure the response is pure JSON without markdown backticks.`,
         preferredModel
       });
 
-      const rawText = response.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return res.json(parsed);
+      const parsed = safeExtractJson(response.text || '');
+      if (parsed) {
+        return res.json(parsed);
+      }
     } catch (err: any) {
       console.error('Universal generate-plan failed:', err.message);
     }
@@ -875,7 +808,7 @@ Ensure the response is pure JSON without markdown backticks.`,
 
     try {
       const response = await callUniversalAI(req, {
-        systemPrompt: 'You are an elite Roblox Luau developer and software architect. Return pure valid JSON only.',
+        systemPrompt: 'You are an elite Roblox Luau developer and software architect. Return pure valid JSON only. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: `Generate production-ready Luau scripts and a 3D preview scene for this game plan:
 Title: ${plan.title}
 Concept: ${plan.concept}
@@ -932,10 +865,10 @@ Write complete, functional Luau scripts with no placeholders and strict typechec
         preferredModel
       });
 
-      const rawText = response.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return res.json(parsed);
+      const parsed = safeExtractJson(response.text || '');
+      if (parsed) {
+        return res.json(parsed);
+      }
     } catch (err: any) {
       console.error('Universal generate-files failed:', err.message);
     }
@@ -1134,7 +1067,7 @@ Project scaffolded by **Roblox AI Studio**.
         .join('\n\n');
 
       const response = await callUniversalAI(req, {
-        systemPrompt: 'You are an elite Roblox Luau software architect. Output pure valid JSON format only.',
+        systemPrompt: 'You are an elite Roblox Luau software architect. Output pure valid JSON format only. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: `You are modifying an existing Roblox Luau project called "${project.name}".
 The user requested this change: "${prompt}".
 
@@ -1161,10 +1094,10 @@ Respond strictly with JSON containing ONLY modified or newly created files, plus
         preferredModel
       });
 
-      const rawText = response.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return res.json(parsed);
+      const parsed = safeExtractJson(response.text || '');
+      if (parsed) {
+        return res.json(parsed);
+      }
     } catch (err: any) {
       console.error('Universal modify-game failed:', err.message);
     }
@@ -1295,7 +1228,7 @@ print("[Server] Custom feature loaded: ${prompt.replace(/"/g, '')}")
 
     try {
       const response = await callUniversalAI(req, {
-        systemPrompt: 'You are an expert Roblox Luau software developer. Return pure valid JSON format only.',
+        systemPrompt: 'You are an expert Roblox Luau software developer. Return pure valid JSON format only. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: `Perform the action "${action}" on this script (${filePath}):
 
 \`\`\`luau
@@ -1311,10 +1244,10 @@ Return a JSON object:
         preferredModel
       });
 
-      const rawText = response.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return res.json(parsed);
+      const parsed = safeExtractJson(response.text || '');
+      if (parsed) {
+        return res.json(parsed);
+      }
     } catch (err: any) {
       console.error('Universal code-action failed:', err.message);
     }
@@ -1358,7 +1291,7 @@ Return a JSON object:
         .join('\n\n');
 
       const response = await callUniversalAI(req, {
-        systemPrompt: 'You are an elite Roblox Luau security and syntax auditor. Return pure valid JSON only.',
+        systemPrompt: 'You are an elite Roblox Luau security and syntax auditor. Return pure valid JSON only. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.',
         userPrompt: `Audit these Roblox Luau scripts for syntax, security exploits, memory leaks, and deprecations:
 ${fileSummaries}
 
@@ -1379,10 +1312,10 @@ Return JSON with this exact structure:
         preferredModel
       });
 
-      const rawText = response.text || '';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
-      return res.json(parsed);
+      const parsed = safeExtractJson(response.text || '');
+      if (parsed) {
+        return res.json(parsed);
+      }
     } catch (err: any) {
       console.error('Universal validate-code failed:', err.message);
     }
@@ -1401,12 +1334,13 @@ Return JSON with this exact structure:
     });
   });
 
-  app.post('/api/roblox/status', async (req, res) => {
+  const handleRobloxStatus = async (req: express.Request, res: express.Response) => {
     const { universeId, placeId, autoCreatePlace } = req.body;
     const apiKey = resolveRobloxKey(req);
 
     if (!apiKey) {
       return res.json({
+        success: false,
         configured: false,
         status: 'NEEDS_CONFIGURATION',
         message: 'Roblox connection required. Set your Roblox API key in the API Settings modal or server environment.'
@@ -1415,6 +1349,7 @@ Return JSON with this exact structure:
 
     if (!universeId) {
       return res.json({
+        success: true,
         configured: true,
         status: 'READY',
         message: 'Roblox Open Cloud API Key connected! Place and Universe allocation is fully automated.'
@@ -1423,6 +1358,7 @@ Return JSON with this exact structure:
 
     if (!placeId && autoCreatePlace) {
       return res.json({
+        success: true,
         configured: true,
         status: 'READY',
         message: `Connected to Universe ${universeId}. Place will be automatically created upon publishing.`
@@ -1431,6 +1367,7 @@ Return JSON with this exact structure:
 
     if (!placeId) {
       return res.json({
+        success: true,
         configured: true,
         status: 'READY',
         message: 'Roblox Open Cloud API Key connected! Place will be auto-allocated.'
@@ -1450,8 +1387,9 @@ Return JSON with this exact structure:
       );
 
       if (robloxRes.ok) {
-        const data = await robloxRes.json();
+        const data = await robloxRes.json().catch(() => ({}));
         return res.json({
+          success: true,
           configured: true,
           status: 'READY',
           message: `Connected successfully to Place ${placeId}! Ready to publish.`,
@@ -1464,6 +1402,7 @@ Return JSON with this exact structure:
           message = `Roblox Open Cloud Authentication Error (HTTP ${robloxRes.status}): The provided API key is invalid or lacks Universe permissions. You can use 'Simulate Demo' to test the full pipeline.`;
         }
         return res.json({
+          success: false,
           configured: true,
           status: 'NEEDS_CONFIGURATION',
           message
@@ -1471,15 +1410,19 @@ Return JSON with this exact structure:
       }
     } catch (err: any) {
       return res.json({
+        success: false,
         configured: true,
         status: 'FAILED',
         message: `Could not reach Roblox Open Cloud: ${err.message}`
       });
     }
-  });
+  };
+
+  app.post('/api/roblox/status', handleRobloxStatus);
+  app.post('/api/roblox/test-connection', handleRobloxStatus);
 
   app.post('/api/roblox/create-place', async (req, res) => {
-    const { universeId, projectName, description } = req.body;
+    const { universeId, projectName, title, description } = req.body;
     const apiKey = resolveRobloxKey(req);
 
     if (!apiKey) {
@@ -1491,6 +1434,7 @@ Return JSON with this exact structure:
     }
 
     const targetUniverseId = universeId || '1234567890';
+    const placeTitle = title || projectName || 'New Roblox Experience';
 
     try {
       const robloxRes = await fetch(
@@ -1503,19 +1447,14 @@ Return JSON with this exact structure:
             'Accept': 'application/json'
           },
           body: JSON.stringify({
-            title: projectName || 'New Roblox Experience',
+            title: placeTitle,
             description: description || 'Generated and published by Roblox AI Studio'
           })
         }
       );
 
       const responseText = await robloxRes.text();
-      let responseData: any = {};
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (e) {
-        responseData = { raw: responseText };
-      }
+      let responseData: any = safeExtractJson(responseText, { raw: responseText });
 
       if (robloxRes.ok) {
         const generatedPlaceId = responseData.placeId || responseData.id || String(responseData);
@@ -1547,26 +1486,33 @@ Return JSON with this exact structure:
     }
   });
 
-  app.post('/api/roblox/publish', async (req, res) => {
-    const { universeId, placeId, autoCreatePlace, projectName, files, simulate } = req.body;
+  const handleRobloxPublish = async (req: express.Request, res: express.Response) => {
+    const { universeId, placeId, autoCreatePlace, projectName, project, files, simulate, versionType } = req.body;
     const apiKey = resolveRobloxKey(req);
 
-    const targetUniverseId = universeId || '1234567890';
+    const safeVersionType = typeof versionType === 'string' && (versionType === 'Saved' || versionType === 'Published')
+      ? versionType
+      : 'Published';
+
+    const targetProjectName = projectName || project?.name || 'Roblox Experience';
+    const targetFiles = files || project?.files || {};
+    const targetUniverseId = universeId || project?.robloxConfig?.universeId || '1234567890';
+    let targetPlaceId = placeId || project?.robloxConfig?.placeId;
 
     if (simulate) {
-      const simulatedPlaceId = placeId || String(Math.floor(10000000000 + Math.random() * 89999999999));
+      const simulatedPlaceId = targetPlaceId || String(Math.floor(10000000000 + Math.random() * 89999999999));
       return res.json({
         status: 'PUBLISHED',
         success: true,
         placeId: simulatedPlaceId,
         isSimulated: true,
-        message: `[Demo Mode / Example Key] Automatically created Place #${simulatedPlaceId} and published "${projectName || 'Game'}"!`,
+        message: `[Demo Mode / Example Key] Automatically created Place #${simulatedPlaceId} and published "${targetProjectName}"!`,
         details: {
           simulated: true,
           universeId: targetUniverseId,
           placeId: simulatedPlaceId,
           versionNumber: 1,
-          filesCount: files ? Object.keys(files).length : 0,
+          filesCount: targetFiles ? Object.keys(targetFiles).length : 0,
           timestamp: new Date().toISOString()
         }
       });
@@ -1580,8 +1526,6 @@ Return JSON with this exact structure:
       });
     }
 
-    let targetPlaceId = placeId;
-
     if (!targetPlaceId || autoCreatePlace) {
       try {
         const createRes = await fetch(
@@ -1594,19 +1538,14 @@ Return JSON with this exact structure:
               'Accept': 'application/json'
             },
             body: JSON.stringify({
-              title: projectName || 'New Roblox Experience',
+              title: targetProjectName,
               description: 'Generated and published by Roblox AI Studio'
             })
           }
         );
 
         const createText = await createRes.text();
-        let createJson: any = {};
-        try {
-          createJson = JSON.parse(createText);
-        } catch (e) {
-          createJson = { raw: createText };
-        }
+        const createJson: any = safeExtractJson(createText, { raw: createText });
 
         if (createRes.ok) {
           targetPlaceId = String(createJson.placeId || createJson.id || createText);
@@ -1632,12 +1571,12 @@ Return JSON with this exact structure:
     }
 
     try {
-      const publishUrl = `https://apis.roblox.com/universes/v1/${targetUniverseId}/places/${targetPlaceId}/versions?versionType=Published`;
+      const publishUrl = `https://apis.roblox.com/universes/v1/${targetUniverseId}/places/${targetPlaceId}/versions?versionType=${safeVersionType}`;
 
       const projectSummary = JSON.stringify({
-        name: projectName,
+        name: targetProjectName,
         exportedAt: new Date().toISOString(),
-        fileCount: files ? Object.keys(files).length : 0
+        fileCount: targetFiles ? Object.keys(targetFiles).length : 0
       });
 
       const robloxRes = await fetch(publishUrl, {
@@ -1652,17 +1591,12 @@ Return JSON with this exact structure:
       const responseText = await robloxRes.text();
 
       if (robloxRes.ok) {
-        let parsedData = {};
-        try {
-          parsedData = JSON.parse(responseText);
-        } catch (e) {
-          parsedData = { raw: responseText };
-        }
-
+        const parsedData: any = safeExtractJson(responseText, { raw: responseText });
         return res.json({
           status: 'PUBLISHED',
           success: true,
           placeId: targetPlaceId,
+          versionNumber: parsedData?.versionNumber || 1,
           message: `Successfully published to Roblox Place ${targetPlaceId}!`,
           details: parsedData
         });
@@ -1686,7 +1620,10 @@ Return JSON with this exact structure:
         message: `Network error connecting to Roblox Publishing API: ${err.message}`
       });
     }
-  });
+  };
+
+  app.post('/api/roblox/publish', handleRobloxPublish);
+  app.post('/api/roblox/publish-place', handleRobloxPublish);
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

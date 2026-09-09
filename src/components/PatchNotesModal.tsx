@@ -8,7 +8,7 @@ interface PatchNotesModalProps {
 }
 
 export function PatchNotesModal({ isOpen, onClose }: PatchNotesModalProps) {
-  const [autoScroll, setAutoScroll] = useState(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
 

@@ -209,7 +209,6 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     setMessages(prev => [...prev, userMsg, initialAiMsg]);
     setIsGenerating(true);
 
-    const hasProjectFiles = Boolean(activeProject && Object.keys(activeProject.files).length > 2);
     const lower = (prompt || '').toLowerCase().trim();
     const isExplicitCreate = lower.startsWith('create ') ||
       lower.startsWith('make a ') ||
@@ -218,19 +217,10 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       lower.includes('new game') ||
       lower.includes('simulator') ||
       lower.includes('tycoon') ||
-      lower.includes('obby');
+      lower.includes('obby') ||
+      lower.includes('create game');
 
-    const isExplicitModify = hasProjectFiles && (
-      lower.includes('add ') ||
-      lower.includes('modify ') ||
-      lower.includes('update ') ||
-      lower.includes('change ') ||
-      lower.includes('fix ') ||
-      lower.includes('refactor ') ||
-      lower.includes('implement ')
-    );
-
-    const determinedMode = isExplicitModify ? 'modify' : (isExplicitCreate ? 'plan' : 'freeform');
+    const determinedMode = isExplicitCreate ? 'plan' : 'freeform';
     if (determinedMode === 'plan') {
       setStage(2);
     }
@@ -246,7 +236,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         body: JSON.stringify({
           prompt,
           mode: determinedMode,
-          project: isExplicitModify ? activeProject : undefined,
+          project: activeProject ? { name: activeProject.name } : undefined,
           attachments: attachments || [],
           provider: apiSettings.provider,
           mistralApiKey: apiSettings.mistralApiKey,
@@ -352,38 +342,6 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
                   );
                 }
               }
-              if (data.files || data.type === 'modify') {
-                const modifiedFilePaths = data.files ? Object.keys(data.files) : [];
-                if (data.files && Object.keys(data.files).length > 0) {
-                  updateActiveProject(prev => ({
-                    ...prev,
-                    lastModified: Date.now(),
-                    files: {
-                      ...prev.files,
-                      ...data.files
-                    }
-                  }));
-
-                  if (modifiedFilePaths.length > 0) {
-                    setActiveFilePath(modifiedFilePaths[0]);
-                    setOpenTabs(prevTabs => Array.from(new Set([...prevTabs, ...modifiedFilePaths])));
-                  }
-                }
-
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === aiMsgId
-                      ? {
-                          ...m,
-                          content: data.explanation || m.content || 'I have updated the game project according to your request.',
-                          modifiedFiles: modifiedFilePaths.length > 0 ? modifiedFilePaths : m.modifiedFiles,
-                          isThinking: false,
-                          isStreaming: false
-                        }
-                      : m
-                  )
-                );
-              }
             } else if (eventName === 'error') {
               throw new Error(data.message || 'Error occurred during streaming');
             } else if (eventName === 'done') {
@@ -405,7 +363,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
             ? {
                 ...m,
                 content: m.content
-                  ? `${m.content}\n\n[Error occurred: ${err.message}]`
+                  ? `${m.content}\n\n[Error: ${err.message}]`
                   : `Could not reach AI generation engine: ${err.message}. Please verify your API key in API Settings or try again.`,
                 isThinking: false,
                 isStreaming: false
@@ -735,9 +693,13 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     }
   };
 
-  const handlePublishToRoblox = async (versionType: 'Saved' | 'Published' = 'Published') => {
+  const handlePublishToRoblox = async (versionType?: string) => {
     if (!activeProject) return;
     setIsPublishing(true);
+
+    const safeVersionType = typeof versionType === 'string' && (versionType === 'Saved' || versionType === 'Published')
+      ? versionType
+      : 'Published';
 
     try {
       const response = await fetch('/api/roblox/publish-place', {
@@ -749,14 +711,19 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         body: JSON.stringify({
           universeId: activeProject.robloxConfig.universeId,
           placeId: activeProject.robloxConfig.placeId,
-          versionType,
-          project: activeProject,
+          versionType: safeVersionType,
+          projectName: activeProject.name,
+          files: activeProject.files,
           autoCreatePlace: activeProject.robloxConfig.autoCreatePlace
         })
       });
 
-      const data = await response.json();
-      if (data.success) {
+      const data = await response.json().catch(() => ({
+        success: false,
+        message: 'Invalid server response'
+      }));
+
+      if (data.success || data.status === 'PUBLISHED') {
         updateActiveProject(prev => ({
           ...prev,
           robloxConfig: {
@@ -764,7 +731,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
             status: 'PUBLISHED',
             placeId: data.placeId ? String(data.placeId) : prev.robloxConfig.placeId,
             lastPublishedAt: new Date().toLocaleTimeString(),
-            lastPublishMessage: `Published successfully! VersionNumber: ${data.versionNumber || 1} (Place ID: ${data.placeId || prev.robloxConfig.placeId})`
+            lastPublishMessage: data.message || `Published successfully! Place ID: ${data.placeId || prev.robloxConfig.placeId}`
           }
         }));
       } else {
@@ -773,7 +740,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
           robloxConfig: {
             ...prev.robloxConfig,
             status: 'FAILED',
-            lastPublishMessage: `Publish failed: ${data.error || 'Check permissions or API key'}`
+            lastPublishMessage: data.message || data.error || 'Publish failed. Check permissions or API key'
           }
         }));
       }
@@ -783,7 +750,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         robloxConfig: {
           ...prev.robloxConfig,
           status: 'FAILED',
-          lastPublishMessage: `Publish exception: ${err.message}`
+          lastPublishMessage: `Publish error: ${err.message}`
         }
       }));
     } finally {

@@ -2,6 +2,23 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.2.0',
+    date: '2026-09-09',
+    title: 'Publish Error Fixes & Chat Mode Optimization',
+    tag: 'Hotfix',
+    highlights: [
+      'Resolved HTMLButtonEvent Publish Error: Fixed an issue where publishing would fail due to an invalid event payload.',
+      'JSON Parsing Enhancements: Hardened JSON extraction pipeline to prevent parsing errors and "long error" crashes.',
+      'Refined AI Chat Behavior: Talking to the AI in chat now defaults to freeform assistance without unintentionally modifying project files.',
+      'Auto-Scrolling Patch Notes: Enhanced the What\'s New modal with auto-scrolling to easily browse past updates.'
+    ],
+    details: [
+      'Fixed the Roblox Publish handler which was incorrectly receiving the click event object instead of the versionType parameter.',
+      'Optimized the AI prompt detection to ensure normal conversational questions are treated as freeform chat instead of forced file modifications.',
+      'Added comprehensive JSON extraction logic to handle cases where raw AI output contained trailing characters or markdown artifacts.'
+    ]
+  },
+  {
     version: 'v2.1.0',
     date: '2026-09-09',
     title: 'Real-Time Thinking Stream & High-Speed Mistral Codestral Engine Fix',

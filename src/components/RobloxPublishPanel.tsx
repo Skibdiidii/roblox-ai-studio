@@ -239,7 +239,7 @@ export function RobloxPublishPanel({
               {autoCreatePlace && (
                 <button
                   type="button"
-                  onClick={onCreatePlaceNow}
+                  onClick={() => onCreatePlaceNow()}
                   disabled={isCreatingPlace}
                   className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium shrink-0 flex items-center gap-1 border border-slate-700"
                   title="Create Place immediately before publishing"
@@ -274,7 +274,7 @@ export function RobloxPublishPanel({
           <button
             id="btn-roblox-test-conn"
             type="button"
-            onClick={onTestConnection}
+            onClick={() => onTestConnection()}
             disabled={isTesting}
             className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium transition-colors"
           >
@@ -314,7 +314,7 @@ export function RobloxPublishPanel({
           <button
             id="btn-roblox-publish-now"
             type="button"
-            onClick={onPublish}
+            onClick={() => onPublish()}
             disabled={isPublishing || validationErrorCount > 0}
             className="flex-1 min-w-[200px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-md bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs font-bold transition-colors shadow"
           >
@@ -331,7 +331,7 @@ export function RobloxPublishPanel({
           <button
             id="btn-roblox-simulate-demo"
             type="button"
-            onClick={onSimulatePublish}
+            onClick={() => onSimulatePublish()}
             disabled={isPublishing}
             className="flex items-center gap-2 py-2.5 px-4 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold transition-colors border border-cyan-800/60"
             title="Test the complete auto-create and publishing flow with simulated responses"
@@ -343,7 +343,7 @@ export function RobloxPublishPanel({
           <button
             id="btn-roblox-export-fallback"
             type="button"
-            onClick={onExport}
+            onClick={() => onExport()}
             className="flex items-center gap-2 py-2.5 px-4 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors border border-slate-700"
           >
             <Download className="w-4 h-4" />
