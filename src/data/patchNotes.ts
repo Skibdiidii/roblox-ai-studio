@@ -2,6 +2,24 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.9.3',
+    date: '2026-09-09',
+    title: 'Adaptive Multi-Tier Model Cascade & Zero-Downtime Gemini Routing',
+    tag: 'Hotfix',
+    highlights: [
+      'Multi-Tier Model Cascade: Automatic seamless failover across gemini-3.1-flash-lite, gemini-3.8-flash, and gemini-flash-latest',
+      'Ultra-Resilient Routing: Prioritized gemini-3.1-flash-lite to bypass peak-hour capacity bottlenecks instantly',
+      'Zero Disruption Fallback: Local structural blueprint generators guarantee unbroken workflows even during external cloud outages',
+      'Continuous Architecture: Instantaneous streaming response for Luau scripts, game planning, and code actions'
+    ],
+    details: [
+      'Configured multi-tier adaptive model routing prioritizing high-throughput gemini-3.1-flash-lite with automated cascade failover across all modern Gemini tiers.',
+      'Refined streaming generator and synchronous caller to seamlessly handle upstream 503 capacity spikes with zero user disruption.',
+      'Updated API settings and diagnostics to reflect modern high-availability tiers.',
+      'Maintained complete historical update changelog with continuous auto-scrolling to explore all past releases.'
+    ]
+  },
+  {
     version: 'v1.9.2',
     date: '2026-09-09',
     title: 'Instant High-Demand Fallback & Zero-Downtime Multi-Model Engine',

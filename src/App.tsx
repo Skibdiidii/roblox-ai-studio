@@ -45,8 +45,8 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (!parsed.preferredModel || parsed.preferredModel === 'gemini-3.6-flash' || parsed.preferredModel === 'gemini-3.8-flash') {
-          parsed.preferredModel = 'gemini-flash-latest';
+        if (!parsed.preferredModel || parsed.preferredModel === 'gemini-3.6-flash' || parsed.preferredModel === 'gemini-3.8-flash' || parsed.preferredModel === 'gemini-flash-latest') {
+          parsed.preferredModel = 'gemini-3.1-flash-lite';
         }
         return parsed;
       } catch (e) {}
@@ -54,7 +54,7 @@ export default function App() {
     return {
       geminiApiKey: '',
       robloxApiKey: '',
-      preferredModel: 'gemini-flash-latest'
+      preferredModel: 'gemini-3.1-flash-lite'
     };
   });
 

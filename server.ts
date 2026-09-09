@@ -13,9 +13,10 @@ const __dirname = path.dirname(__filename);
 const PORT = 3000;
 
 function normalizeModel(model?: string): string {
-  if (!model) return 'gemini-flash-latest';
-  if (model === 'gemini-3.6-flash') return 'gemini-flash-latest';
-  if (model === 'gemini-3.8-flash') return 'gemini-flash-latest';
+  if (!model) return 'gemini-3.1-flash-lite';
+  if (model === 'gemini-3.6-flash') return 'gemini-3.1-flash-lite';
+  if (model === 'gemini-3.8-flash') return 'gemini-3.1-flash-lite';
+  if (model === 'gemini-flash-latest') return 'gemini-3.1-flash-lite';
   return model;
 }
 
@@ -37,7 +38,7 @@ function getGeminiClient(customKey?: string): GoogleGenAI | null {
 async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
   const normPref = normalizeModel(preferredModel);
   const candidateModels = Array.from(
-    new Set([normPref, 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter(Boolean))
+    new Set([normPref, 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'].filter(Boolean))
   );
   let lastError: any = null;
 
@@ -60,7 +61,7 @@ async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: strin
 async function* streamGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
   const normPref = normalizeModel(preferredModel);
   const candidateModels = Array.from(
-    new Set([normPref, 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter(Boolean))
+    new Set([normPref, 'gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.1-pro-preview'].filter(Boolean))
   );
   let lastError: any = null;
 
@@ -109,7 +110,7 @@ async function startServer() {
       status: 'ok',
       hasGemini: !!process.env.GEMINI_API_KEY,
       hasRobloxKey: !!process.env.ROBLOX_OPEN_CLOUD_API_KEY,
-      defaultModel: 'gemini-flash-latest'
+      defaultModel: 'gemini-3.1-flash-lite'
     });
   });
 
