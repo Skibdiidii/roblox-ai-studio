@@ -138,7 +138,10 @@ export interface PatchNote {
 }
 
 export interface ApiSettings {
+  provider?: 'mistral' | 'gemini';
+  mistralApiKey?: string;
   geminiApiKey: string;
   robloxApiKey: string;
   preferredModel: string;
 }
+

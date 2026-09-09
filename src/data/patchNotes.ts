@@ -2,6 +2,26 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.0.0',
+    date: '2026-09-09',
+    title: 'Mistral AI Engine Integration: Codestral Luau Generation & Pixtral Multimodal Vision',
+    tag: 'Major',
+    highlights: [
+      'Mistral AI Primary Engine: Integrated Mistral AI featuring specialized Codestral for precision Luau script synthesis',
+      'Pixtral Multimodal Vision: Advanced image analysis for Roblox UI designs, screenshots, and visual assets',
+      'Dual-Engine Architecture: Switch smoothly between Mistral AI and Google Gemini with automatic failover',
+      'Instant AI Verification: Real-time key testing and model selection in API Settings for all Mistral tiers',
+      'Enhanced Luau Performance: Strict type annotations (--!strict) and modern task scheduler patterns'
+    ],
+    details: [
+      'Integrated Mistral AI as the primary AI engine, utilizing codestral-latest for high-accuracy Roblox Luau script generation and game architecture planning.',
+      'Added multimodal vision support via pixtral-12b-2409, allowing users to upload screenshots, UI mocks, and diagrams for automatic script and architecture translation.',
+      'Implemented full SSE streaming directly from Mistral chat completions API with live token streaming and thinking stages.',
+      'Enhanced API Settings modal with provider toggles (Mistral AI / Google Gemini), model selection dropdowns, and instant credential verification.',
+      'Maintained complete historical update changelog with continuous auto-scrolling to explore all past releases.'
+    ]
+  },
+  {
     version: 'v1.9.3',
     date: '2026-09-09',
     title: 'Adaptive Multi-Tier Model Cascade & Zero-Downtime Gemini Routing',

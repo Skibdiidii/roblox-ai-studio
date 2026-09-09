@@ -45,16 +45,21 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (!parsed.preferredModel || parsed.preferredModel === 'gemini-3.6-flash' || parsed.preferredModel === 'gemini-3.8-flash' || parsed.preferredModel === 'gemini-flash-latest') {
-          parsed.preferredModel = 'gemini-3.1-flash-lite';
+        if (!parsed.provider) {
+          parsed.provider = 'mistral';
+        }
+        if (!parsed.preferredModel || parsed.preferredModel.includes('gemini-3.')) {
+          parsed.preferredModel = 'codestral-latest';
         }
         return parsed;
       } catch (e) {}
     }
     return {
+      provider: 'mistral',
+      mistralApiKey: '',
       geminiApiKey: '',
       robloxApiKey: '',
-      preferredModel: 'gemini-3.1-flash-lite'
+      preferredModel: 'codestral-latest'
     };
   });
 
@@ -88,7 +93,7 @@ export default function App() {
     {
       id: 'welcome-msg',
       sender: 'ai',
-      content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Gemini.
+      content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).
 
 You can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
       timestamp: Date.now()
@@ -214,6 +219,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(apiSettings.mistralApiKey ? { 'x-mistral-api-key': apiSettings.mistralApiKey } : {}),
           ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
         },
         body: JSON.stringify({
@@ -221,6 +227,9 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
           mode: isModification ? 'modify' : 'plan',
           project: isModification ? activeProject : undefined,
           attachments: attachments || [],
+          provider: apiSettings.provider,
+          mistralApiKey: apiSettings.mistralApiKey,
+          geminiApiKey: apiSettings.geminiApiKey,
           preferredModel: apiSettings.preferredModel
         })
       });
@@ -404,10 +413,14 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(apiSettings.mistralApiKey ? { 'x-mistral-api-key': apiSettings.mistralApiKey } : {}),
           ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
         },
         body: JSON.stringify({
           plan,
+          provider: apiSettings.provider,
+          mistralApiKey: apiSettings.mistralApiKey,
+          geminiApiKey: apiSettings.geminiApiKey,
           preferredModel: apiSettings.preferredModel
         })
       });
@@ -491,6 +504,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(apiSettings.mistralApiKey ? { 'x-mistral-api-key': apiSettings.mistralApiKey } : {}),
           ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
         },
         body: JSON.stringify({
@@ -498,6 +512,9 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
           prompt,
           currentFile,
           allFiles: activeProject.files,
+          provider: apiSettings.provider,
+          mistralApiKey: apiSettings.mistralApiKey,
+          geminiApiKey: apiSettings.geminiApiKey,
           preferredModel: apiSettings.preferredModel
         })
       });
