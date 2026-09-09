@@ -116,3 +116,9 @@ export interface PatchNote {
   details: string[];
   tag: 'Major' | 'Feature' | 'Improvement' | 'Hotfix';
 }
+
+export interface ApiSettings {
+  geminiApiKey: string;
+  robloxApiKey: string;
+  preferredModel: string;
+}

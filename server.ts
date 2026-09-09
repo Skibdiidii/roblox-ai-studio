@@ -12,10 +12,42 @@ const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 
-function getGeminiClient(): GoogleGenAI | null {
-  const key = process.env.GEMINI_API_KEY;
+function getGeminiClient(customKey?: string): GoogleGenAI | null {
+  const key = customKey || process.env.GEMINI_API_KEY;
   if (!key) return null;
   return new GoogleGenAI({ apiKey: key });
+}
+
+async function callGemini(ai: GoogleGenAI, contents: string, preferredModel?: string) {
+  const candidateModels = [preferredModel, 'gemini-3.6-flash', 'gemini-3.8-flash'].filter(Boolean) as string[];
+  const modelsToTry = Array.from(new Set(candidateModels));
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents
+      });
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      console.error(`Gemini generation attempt failed with ${model}:`, err.message);
+    }
+  }
+  throw lastError;
+}
+
+function resolveRobloxKey(req: express.Request): string | undefined {
+  const headerKey = req.headers['x-roblox-api-key'] as string | undefined;
+  const bodyKey = req.body?.robloxApiKey;
+  return headerKey || bodyKey || process.env.ROBLOX_OPEN_CLOUD_API_KEY;
+}
+
+function resolveGeminiKey(req: express.Request): string | undefined {
+  const headerKey = req.headers['x-gemini-api-key'] as string | undefined;
+  const bodyKey = req.body?.geminiApiKey;
+  return headerKey || bodyKey || process.env.GEMINI_API_KEY;
 }
 
 async function startServer() {
@@ -26,23 +58,41 @@ async function startServer() {
     res.json({
       status: 'ok',
       hasGemini: !!process.env.GEMINI_API_KEY,
-      hasRobloxKey: !!process.env.ROBLOX_OPEN_CLOUD_API_KEY
+      hasRobloxKey: !!process.env.ROBLOX_OPEN_CLOUD_API_KEY,
+      defaultModel: 'gemini-3.6-flash'
     });
   });
 
+  app.post('/api/ai/test-key', async (req, res) => {
+    const key = resolveGeminiKey(req);
+    if (!key) {
+      return res.status(400).json({ ok: false, error: 'No Gemini API key provided' });
+    }
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: key });
+      const model = req.body?.preferredModel || 'gemini-3.6-flash';
+      await callGemini(ai, 'Respond with OK', model);
+      return res.json({ ok: true, message: 'Gemini API key is active and verified.' });
+    } catch (err: any) {
+      return res.status(400).json({ ok: false, error: err.message || 'Failed to authenticate with Gemini API.' });
+    }
+  });
+
   app.post('/api/ai/generate-plan', async (req, res) => {
-    const { prompt } = req.body;
+    const { prompt, preferredModel } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const ai = getGeminiClient();
+    const customKey = resolveGeminiKey(req);
+    const ai = getGeminiClient(customKey);
 
     if (ai) {
       try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `You are an expert Roblox Luau game architect and developer.
+        const response = await callGemini(
+          ai,
+          `You are an expert Roblox Luau game architect and developer.
 A user wants to build this Roblox game: "${prompt}".
 
 Generate a complete JSON game plan adhering strictly to this JSON format:
@@ -86,8 +136,9 @@ Generate a complete JSON game plan adhering strictly to this JSON format:
   ]
 }
 
-Ensure the response is pure JSON without markdown backticks.`
-        });
+Ensure the response is pure JSON without markdown backticks.`,
+          preferredModel
+        );
 
         const rawText = response.text || '';
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -160,16 +211,17 @@ Ensure the response is pure JSON without markdown backticks.`
   });
 
   app.post('/api/ai/generate-files', async (req, res) => {
-    const { plan } = req.body;
+    const { plan, preferredModel } = req.body;
     if (!plan) return res.status(400).json({ error: 'Plan is required' });
 
-    const ai = getGeminiClient();
+    const customKey = resolveGeminiKey(req);
+    const ai = getGeminiClient(customKey);
 
     if (ai) {
       try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `You are a Roblox Luau developer.
+        const response = await callGemini(
+          ai,
+          `You are a Roblox Luau developer.
 Generate production-ready Luau scripts and a 3D preview scene for this game plan:
 Title: ${plan.title}
 Concept: ${plan.concept}
@@ -222,8 +274,9 @@ Return a JSON object with this exact structure:
   ]
 }
 
-Write complete, functional Luau scripts with no placeholders and strict typechecking (--!strict). Respond with pure JSON.`
-        });
+Write complete, functional Luau scripts with no placeholders and strict typechecking (--!strict). Respond with pure JSON.`,
+          preferredModel
+        );
 
         const rawText = response.text || '';
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -416,12 +469,13 @@ Project scaffolded by **Roblox AI Studio**.
   });
 
   app.post('/api/ai/modify-game', async (req, res) => {
-    const { prompt, project } = req.body;
+    const { prompt, project, preferredModel } = req.body;
     if (!prompt || !project) {
       return res.status(400).json({ error: 'Prompt and project are required' });
     }
 
-    const ai = getGeminiClient();
+    const customKey = resolveGeminiKey(req);
+    const ai = getGeminiClient(customKey);
 
     if (ai) {
       try {
@@ -430,9 +484,9 @@ Project scaffolded by **Roblox AI Studio**.
           .slice(0, 6)
           .join('\n\n');
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `You are modifying an existing Roblox Luau project called "${project.name}".
+        const response = await callGemini(
+          ai,
+          `You are modifying an existing Roblox Luau project called "${project.name}".
 The user requested this change: "${prompt}".
 
 Current files in the project:
@@ -454,8 +508,9 @@ Respond strictly with JSON containing ONLY modified or newly created files, plus
     ... (updated or expanded preview elements list)
   ]
 }
-`
-        });
+`,
+          preferredModel
+        );
 
         const rawText = response.text || '';
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -585,18 +640,19 @@ print("[Server] Custom feature loaded: ${prompt.replace(/"/g, '')}")
   });
 
   app.post('/api/ai/code-action', async (req, res) => {
-    const { action, code, filePath } = req.body;
+    const { action, code, filePath, preferredModel } = req.body;
     if (!action || !code) {
       return res.status(400).json({ error: 'Action and code are required' });
     }
 
-    const ai = getGeminiClient();
+    const customKey = resolveGeminiKey(req);
+    const ai = getGeminiClient(customKey);
 
     if (ai) {
       try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: `You are an expert Roblox Luau developer.
+        const response = await callGemini(
+          ai,
+          `You are an expert Roblox Luau developer.
 Perform the action "${action}" on this script (${filePath}):
 
 \`\`\`luau
@@ -608,8 +664,9 @@ Return a JSON object:
   "explanation": "Clear explanation of what was done or found",
   "code": "The full revised Luau code (if applicable, or null if action was only explain)"
 }
-`
-        });
+`,
+          preferredModel
+        );
 
         const rawText = response.text || '';
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -648,13 +705,13 @@ Return a JSON object:
 
   app.post('/api/roblox/status', async (req, res) => {
     const { universeId, placeId } = req.body;
-    const apiKey = process.env.ROBLOX_OPEN_CLOUD_API_KEY;
+    const apiKey = resolveRobloxKey(req);
 
     if (!apiKey) {
       return res.json({
         configured: false,
         status: 'NEEDS_CONFIGURATION',
-        message: 'Roblox connection required. Set ROBLOX_OPEN_CLOUD_API_KEY in environment variables or Settings.'
+        message: 'Roblox connection required. Set your Roblox API key in the API Settings modal or server environment.'
       });
     }
 
@@ -662,7 +719,7 @@ Return a JSON object:
       return res.json({
         configured: true,
         status: 'NEEDS_CONFIGURATION',
-        message: 'Roblox Open Cloud API Key is configured on the backend, but Universe ID and Place ID must be provided.'
+        message: 'Roblox Open Cloud API Key is configured, but Universe ID and Place ID must be provided.'
       });
     }
 
@@ -705,13 +762,13 @@ Return a JSON object:
 
   app.post('/api/roblox/publish', async (req, res) => {
     const { universeId, placeId, projectName, files } = req.body;
-    const apiKey = process.env.ROBLOX_OPEN_CLOUD_API_KEY;
+    const apiKey = resolveRobloxKey(req);
 
     if (!apiKey) {
       return res.status(200).json({
         status: 'NEEDS_CONFIGURATION',
         success: false,
-        message: 'Roblox connection required. Configure ROBLOX_OPEN_CLOUD_API_KEY in server environment to publish directly. Use "Export Project" for manual Studio import in Demo Mode.'
+        message: 'Roblox connection required. Provide your Roblox Open Cloud API Key in API Settings to publish directly. Use "Export Project" for manual Studio import in Demo Mode.'
       });
     }
 

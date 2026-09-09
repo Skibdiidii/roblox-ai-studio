@@ -9,10 +9,9 @@ import {
   Cloud,
   Download,
   FolderKanban,
-  HelpCircle,
   Bell,
   Code2,
-  Radio
+  Key
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,6 +21,7 @@ interface HeaderProps {
   project: Project;
   validationIssues: ValidationResult[];
   onOpenPatchNotes: () => void;
+  onOpenApiSettings: () => void;
   onExport: () => void;
 }
 
@@ -32,10 +32,10 @@ export function Header({
   project,
   validationIssues,
   onOpenPatchNotes,
+  onOpenApiSettings,
   onExport
 }: HeaderProps) {
   const errorCount = validationIssues.filter(i => i.severity === 'error').length;
-  const warningCount = validationIssues.filter(i => i.severity === 'warning').length;
 
   const stages = [
     { num: 1, label: 'Prompt' },
@@ -68,7 +68,7 @@ export function Header({
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 font-mono truncate max-w-[160px] md:max-w-xs">
-                {project.name}
+                {project ? project.name : 'No Project Active'}
               </div>
             </div>
           </button>
@@ -105,6 +105,16 @@ export function Header({
 
         <div className="flex items-center gap-2">
           <button
+            id="btn-header-api-settings"
+            onClick={onOpenApiSettings}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors border border-slate-700/80"
+            title="Configure Gemini & Roblox API Keys"
+          >
+            <Key className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">API Keys</span>
+          </button>
+
+          <button
             id="btn-header-patch-notes"
             onClick={onOpenPatchNotes}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors border border-slate-700/80"
@@ -114,14 +124,16 @@ export function Header({
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
           </button>
 
-          <button
-            id="btn-header-export-zip"
-            onClick={onExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors border border-slate-700/80"
-          >
-            <Download className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden sm:inline">Export ZIP</span>
-          </button>
+          {project && (
+            <button
+              id="btn-header-export-zip"
+              onClick={onExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors border border-slate-700/80"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">Export ZIP</span>
+            </button>
+          )}
         </div>
       </div>
 

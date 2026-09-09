@@ -2,6 +2,25 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.5.0',
+    date: '2026-09-09',
+    title: 'Gemini 3.6 Flash Engine & Custom API Key Settings',
+    tag: 'Major',
+    highlights: [
+      'Upgraded AI Engine to Gemini 3.6 Flash with fallback to Gemini 3.8 Flash',
+      'Added Custom API Key Settings Modal for Gemini & Roblox Open Cloud credentials',
+      'Clean Workspace Mode: Removed all preloaded placeholder projects for an instant clean slate',
+      'Client-side API key override support allowing users to bring their own AI & publishing keys'
+    ],
+    details: [
+      'Resolved invalid model deprecation error by migrating to the latest Gemini 3.6 Flash / 3.8 Flash models.',
+      'Added dedicated API Key Settings dialog accessible from the top navigation bar.',
+      'Users can now supply personal Gemini API Keys and Roblox Open Cloud Keys directly in settings.',
+      'Removed hard-coded placeholder projects so users start with a clean workspace or choose from starter templates.',
+      'Improved server-side proxy handling for dynamic user-supplied API credentials with local fallback.'
+    ]
+  },
+  {
     version: 'v1.4.0',
     date: '2026-09-09',
     title: 'Roblox Open Cloud Real Publishing & 3D Interactive World',
@@ -58,27 +77,29 @@ export const PATCH_NOTES: PatchNote[] = [
     tag: 'Improvement',
     highlights: [
       'Hierarchical tree explorer matching Roblox Studio Explorer',
-      'Tabbed code editor with multi-file management and quick search',
-      'Single-file and full project zip downloader'
+      'Filter and search scripts by folder and filename',
+      'Multi-tab code viewer with fast switching'
     ],
     details: [
-      'Color-coded icons for ServerScripts (.server.lua), LocalScripts (.client.lua), and ModuleScripts (.lua).',
-      'Added quick copy to clipboard and Luau syntax tokenization.'
+      'Added color-coded script badges: Server (.server.lua), Client (.client.lua), and Module (.lua).',
+      'Search input for immediate file filtering across deep hierarchies.',
+      'Integrated quick tab closing and active path synchronization.'
     ]
   },
   {
     version: 'v1.0.0',
     date: '2026-07-15',
-    title: 'Initial Launch of Roblox AI Studio',
+    title: 'Initial Release: Roblox AI Studio Foundation',
     tag: 'Major',
     highlights: [
-      'AI-driven Game Plan generation from natural language prompts',
-      'Interactive Chat Interface for designing games step-by-step',
-      'Sample Anime Training Simulator starter project'
+      'Natural language game concept prompt generation',
+      'Full Luau script generation adhering to strict typing',
+      'Client-server architecture design and remote management'
     ],
     details: [
-      'Initial release of browser-based Roblox AI Studio development environment.',
-      'Prompt-to-game pipeline with concept, gameplay loop, and systems breakdown.'
+      'Established core pipeline: Prompt -> Plan -> Review -> Code.',
+      'Created Luau typechecking rules and Rojo default.project.json generation.',
+      'Built downloadable ZIP packaging for studio imports.'
     ]
   }
 ];
