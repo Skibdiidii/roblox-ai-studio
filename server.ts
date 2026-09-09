@@ -704,7 +704,7 @@ Return a JSON object:
   });
 
   app.post('/api/roblox/status', async (req, res) => {
-    const { universeId, placeId } = req.body;
+    const { universeId, placeId, autoCreatePlace } = req.body;
     const apiKey = resolveRobloxKey(req);
 
     if (!apiKey) {
@@ -715,11 +715,27 @@ Return a JSON object:
       });
     }
 
-    if (!universeId || !placeId) {
+    if (!universeId) {
       return res.json({
         configured: true,
         status: 'NEEDS_CONFIGURATION',
-        message: 'Roblox Open Cloud API Key is configured, but Universe ID and Place ID must be provided.'
+        message: 'Roblox Open Cloud API Key is configured, but Universe ID must be provided.'
+      });
+    }
+
+    if (!placeId && autoCreatePlace) {
+      return res.json({
+        configured: true,
+        status: 'READY',
+        message: `Connected to Universe ${universeId}. Place will be automatically created upon publishing.`
+      });
+    }
+
+    if (!placeId) {
+      return res.json({
+        configured: true,
+        status: 'NEEDS_CONFIGURATION',
+        message: 'Please provide a Place ID or enable Auto-Create Place.'
       });
     }
 
@@ -745,10 +761,14 @@ Return a JSON object:
         });
       } else {
         const errorText = await robloxRes.text();
+        let message = `Roblox API responded with status ${robloxRes.status}: ${errorText || robloxRes.statusText}`;
+        if (robloxRes.status === 401 || robloxRes.status === 403) {
+          message = `Roblox Open Cloud Authentication Error (HTTP ${robloxRes.status}): The provided API key is invalid or lacks Universe permissions. You can use 'Simulate Demo' to test the full pipeline.`;
+        }
         return res.json({
           configured: true,
           status: 'NEEDS_CONFIGURATION',
-          message: `Roblox API responded with status ${robloxRes.status}: ${errorText || robloxRes.statusText}`
+          message
         });
       }
     } catch (err: any) {
@@ -760,28 +780,173 @@ Return a JSON object:
     }
   });
 
-  app.post('/api/roblox/publish', async (req, res) => {
-    const { universeId, placeId, projectName, files } = req.body;
+  app.post('/api/roblox/create-place', async (req, res) => {
+    const { universeId, projectName, description } = req.body;
     const apiKey = resolveRobloxKey(req);
+
+    if (!apiKey) {
+      return res.status(200).json({
+        success: false,
+        status: 'NEEDS_CONFIGURATION',
+        message: 'Roblox API key required. Provide your API Key in API Settings to create places on Roblox Open Cloud.'
+      });
+    }
+
+    if (!universeId) {
+      return res.status(200).json({
+        success: false,
+        status: 'NEEDS_CONFIGURATION',
+        message: 'Universe ID is required to create a new Place inside your Roblox experience.'
+      });
+    }
+
+    try {
+      const robloxRes = await fetch(
+        `https://apis.roblox.com/universes/v1/${universeId}/places`,
+        {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            title: projectName || 'New Roblox Experience',
+            description: description || 'Generated and published by Roblox AI Studio'
+          })
+        }
+      );
+
+      const responseText = await robloxRes.text();
+      let responseData: any = {};
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = { raw: responseText };
+      }
+
+      if (robloxRes.ok) {
+        const generatedPlaceId = responseData.placeId || responseData.id || String(responseData);
+        return res.json({
+          success: true,
+          status: 'READY',
+          placeId: String(generatedPlaceId),
+          message: `Successfully created new Place #${generatedPlaceId} in Universe ${universeId}!`,
+          details: responseData
+        });
+      } else {
+        let friendlyMsg = `Roblox Open Cloud returned HTTP ${robloxRes.status}: ${responseText || robloxRes.statusText}`;
+        if (robloxRes.status === 401 || robloxRes.status === 403) {
+          friendlyMsg = `Roblox Open Cloud Authentication Error (HTTP ${robloxRes.status}): The provided API key is invalid or lacks 'Place: Write / Create' permission. You can use 'Simulate Demo' to test the full pipeline.`;
+        }
+        return res.json({
+          success: false,
+          status: 'FAILED',
+          message: friendlyMsg,
+          details: { httpStatus: robloxRes.status, response: responseData }
+        });
+      }
+    } catch (err: any) {
+      return res.json({
+        success: false,
+        status: 'FAILED',
+        message: `Failed to connect to Roblox Open Cloud: ${err.message}`
+      });
+    }
+  });
+
+  app.post('/api/roblox/publish', async (req, res) => {
+    const { universeId, placeId, autoCreatePlace, projectName, files, simulate } = req.body;
+    const apiKey = resolveRobloxKey(req);
+
+    if (simulate) {
+      const simulatedPlaceId = placeId || String(Math.floor(10000000000 + Math.random() * 89999999999));
+      return res.json({
+        status: 'PUBLISHED',
+        success: true,
+        placeId: simulatedPlaceId,
+        isSimulated: true,
+        message: `[Demo Mode / Example Key] Automatically created Place #${simulatedPlaceId} in Universe ${universeId || '1234567890'} and published "${projectName || 'Game'}"!`,
+        details: {
+          simulated: true,
+          universeId: universeId || '1234567890',
+          placeId: simulatedPlaceId,
+          versionNumber: 1,
+          filesCount: files ? Object.keys(files).length : 0,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
 
     if (!apiKey) {
       return res.status(200).json({
         status: 'NEEDS_CONFIGURATION',
         success: false,
-        message: 'Roblox connection required. Provide your Roblox Open Cloud API Key in API Settings to publish directly. Use "Export Project" for manual Studio import in Demo Mode.'
+        message: 'Roblox connection required. Provide your Roblox Open Cloud API Key in API Settings to publish directly, or use "Simulate Demo" to test with an example key.'
       });
     }
 
-    if (!universeId || !placeId) {
+    if (!universeId) {
       return res.status(200).json({
         status: 'NEEDS_CONFIGURATION',
         success: false,
-        message: 'Universe ID and Place ID are required for publishing to Roblox Open Cloud.'
+        message: 'Universe ID is required for publishing to Roblox Open Cloud.'
       });
     }
 
+    let targetPlaceId = placeId;
+
+    if (!targetPlaceId || autoCreatePlace) {
+      try {
+        const createRes = await fetch(
+          `https://apis.roblox.com/universes/v1/${universeId}/places`,
+          {
+            method: 'POST',
+            headers: {
+              'x-api-key': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              title: projectName || 'New Roblox Experience',
+              description: 'Generated and published by Roblox AI Studio'
+            })
+          }
+        );
+
+        const createText = await createRes.text();
+        let createJson: any = {};
+        try {
+          createJson = JSON.parse(createText);
+        } catch (e) {
+          createJson = { raw: createText };
+        }
+
+        if (createRes.ok) {
+          targetPlaceId = String(createJson.placeId || createJson.id || createText);
+        } else {
+          let friendlyMsg = `Roblox Open Cloud place creation returned HTTP ${createRes.status}: ${createText || createRes.statusText}`;
+          if (createRes.status === 401 || createRes.status === 403) {
+            friendlyMsg = `Roblox Open Cloud Authentication Error (HTTP ${createRes.status}): The provided API key is invalid or expired. To test the pipeline with an example key, click "Simulate Demo (Example Key)" below.`;
+          }
+          return res.json({
+            status: 'FAILED',
+            success: false,
+            message: friendlyMsg,
+            details: { step: 'create-place', httpStatus: createRes.status, response: createJson }
+          });
+        }
+      } catch (err: any) {
+        return res.json({
+          status: 'FAILED',
+          success: false,
+          message: `Network error auto-creating place on Roblox Open Cloud: ${err.message}`
+        });
+      }
+    }
+
     try {
-      const publishUrl = `https://apis.roblox.com/universes/v1/${universeId}/places/${placeId}/versions?versionType=Published`;
+      const publishUrl = `https://apis.roblox.com/universes/v1/${universeId}/places/${targetPlaceId}/versions?versionType=Published`;
 
       const projectSummary = JSON.stringify({
         name: projectName,
@@ -811,15 +976,21 @@ Return a JSON object:
         return res.json({
           status: 'PUBLISHED',
           success: true,
-          message: `Successfully published to Roblox Place ${placeId}!`,
+          placeId: targetPlaceId,
+          message: `Successfully published to Roblox Place ${targetPlaceId}!`,
           details: parsedData
         });
       } else {
+        let friendlyMsg = `Roblox Open Cloud Publishing returned HTTP ${robloxRes.status}: ${responseText || 'Check API permissions for place publishing.'}`;
+        if (robloxRes.status === 401 || robloxRes.status === 403) {
+          friendlyMsg = `Roblox Open Cloud Authentication Error (HTTP ${robloxRes.status}): The provided API key is invalid or expired. Use "Simulate Demo (Example Key)" to test the workflow without an active key.`;
+        }
         return res.json({
           status: 'FAILED',
           success: false,
-          message: `Roblox Open Cloud Publishing returned HTTP ${robloxRes.status}: ${responseText || 'Check API permissions for place publishing.'}`,
-          details: { status: robloxRes.status, response: responseText }
+          placeId: targetPlaceId,
+          message: friendlyMsg,
+          details: { step: 'publish-version', httpStatus: robloxRes.status, response: responseText }
         });
       }
     } catch (err: any) {

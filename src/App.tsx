@@ -64,6 +64,7 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isTestingRoblox, setIsTestingRoblox] = useState(false);
+  const [isCreatingPlace, setIsCreatingPlace] = useState(false);
   const [isPatchNotesOpen, setIsPatchNotesOpen] = useState(true);
   const [showSidePreview, setShowSidePreview] = useState(true);
 
@@ -326,6 +327,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         robloxConfig: {
           universeId: '',
           placeId: '',
+          autoCreatePlace: true,
           status: 'NEEDS_CONFIGURATION',
           apiKeyConfigured: false,
           lastPublishMessage: 'Project generated from AI Plan. Ready to publish or export.',
@@ -431,7 +433,9 @@ You can also browse starter templates in the Dashboard or configure custom API k
       robloxConfig: {
         ...prev.robloxConfig,
         status: 'PUBLISHING',
-        lastPublishMessage: 'Sending request to Roblox Open Cloud Place Publishing API...'
+        lastPublishMessage: prev.robloxConfig.autoCreatePlace
+          ? 'Auto-creating new Place in Universe and publishing game payload...'
+          : 'Sending request to Roblox Open Cloud Place Publishing API...'
       }
     }));
 
@@ -445,6 +449,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         body: JSON.stringify({
           universeId: activeProject.robloxConfig.universeId,
           placeId: activeProject.robloxConfig.placeId,
+          autoCreatePlace: activeProject.robloxConfig.autoCreatePlace ?? true,
           projectName: activeProject.name,
           files: activeProject.files
         })
@@ -457,6 +462,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         robloxConfig: {
           ...prev.robloxConfig,
           status: data.status,
+          placeId: data.placeId || prev.robloxConfig.placeId,
           lastPublishedAt: new Date().toLocaleString(),
           lastPublishMessage: data.message,
           rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
@@ -476,6 +482,97 @@ You can also browse starter templates in the Dashboard or configure custom API k
     }
   };
 
+  const handleSimulateRobloxPublish = async () => {
+    if (!activeProject) return;
+    setIsPublishing(true);
+    try {
+      const response = await fetch('/api/roblox/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          universeId: activeProject.robloxConfig.universeId || '1234567890',
+          placeId: activeProject.robloxConfig.placeId,
+          autoCreatePlace: true,
+          projectName: activeProject.name,
+          files: activeProject.files,
+          simulate: true
+        })
+      });
+
+      const data = await response.json();
+
+      updateActiveProject(prev => ({
+        ...prev,
+        robloxConfig: {
+          ...prev.robloxConfig,
+          status: data.status,
+          placeId: data.placeId || prev.robloxConfig.placeId,
+          lastPublishedAt: new Date().toLocaleString(),
+          lastPublishMessage: data.message,
+          rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+        }
+      }));
+    } catch (err: any) {
+      updateActiveProject(prev => ({
+        ...prev,
+        robloxConfig: {
+          ...prev.robloxConfig,
+          status: 'FAILED',
+          lastPublishMessage: `Simulation error: ${err.message}`
+        }
+      }));
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleCreatePlaceNow = async () => {
+    if (!activeProject) return;
+    setIsCreatingPlace(true);
+    try {
+      const response = await fetch('/api/roblox/create-place', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiSettings.robloxApiKey ? { 'x-roblox-api-key': apiSettings.robloxApiKey } : {})
+        },
+        body: JSON.stringify({
+          universeId: activeProject.robloxConfig.universeId,
+          projectName: activeProject.name,
+          description: activeProject.description
+        })
+      });
+
+      const data = await response.json();
+      if (data.success && data.placeId) {
+        updateActiveProject(prev => ({
+          ...prev,
+          robloxConfig: {
+            ...prev.robloxConfig,
+            placeId: data.placeId,
+            lastPublishMessage: data.message,
+            rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+          }
+        }));
+      } else {
+        updateActiveProject(prev => ({
+          ...prev,
+          robloxConfig: {
+            ...prev.robloxConfig,
+            lastPublishMessage: data.message,
+            rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+          }
+        }));
+      }
+    } catch (err: any) {
+      alert(`Error creating place: ${err.message}`);
+    } finally {
+      setIsCreatingPlace(false);
+    }
+  };
+
   const handleTestRobloxConnection = async () => {
     if (!activeProject) return;
     setIsTestingRoblox(true);
@@ -488,7 +585,8 @@ You can also browse starter templates in the Dashboard or configure custom API k
         },
         body: JSON.stringify({
           universeId: activeProject.robloxConfig.universeId,
-          placeId: activeProject.robloxConfig.placeId
+          placeId: activeProject.robloxConfig.placeId,
+          autoCreatePlace: activeProject.robloxConfig.autoCreatePlace ?? true
         })
       });
 
@@ -525,6 +623,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
       robloxConfig: {
         universeId: '',
         placeId: '',
+        autoCreatePlace: true,
         status: 'NEEDS_CONFIGURATION',
         apiKeyConfigured: false,
         lastPublishMessage: `Project initialized from ${template.name} template.`,
@@ -593,6 +692,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
       robloxConfig: {
         universeId: '',
         placeId: '',
+        autoCreatePlace: true,
         status: 'NEEDS_CONFIGURATION',
         apiKeyConfigured: false,
         lastPublishMessage: 'Blank experience ready for development.',
@@ -857,9 +957,12 @@ You can also browse starter templates in the Dashboard or configure custom API k
                 }}
                 onTestConnection={handleTestRobloxConnection}
                 onPublish={handlePublishToRoblox}
+                onSimulatePublish={handleSimulateRobloxPublish}
+                onCreatePlaceNow={handleCreatePlaceNow}
                 onExport={() => handleExportProject()}
                 isPublishing={isPublishing}
                 isTesting={isTestingRoblox}
+                isCreatingPlace={isCreatingPlace}
                 validationErrorCount={validationIssues.filter(i => i.severity === 'error').length}
               />
             ) : (

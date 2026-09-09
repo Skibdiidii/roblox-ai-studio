@@ -2,6 +2,27 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.6.0',
+    date: '2026-09-09',
+    title: 'Automated Roblox Place Creation & One-Click Publishing Pipeline',
+    tag: 'Major',
+    highlights: [
+      'Automated Place Creation: No need to manually create or copy Place IDs from Roblox Studio',
+      'One-Click Place Allocation: Automatically provisions new Places directly in your Universe via Open Cloud',
+      'Create Place Now Action: Instant place provisioning with real-time Place ID assignment',
+      'Simulated Publishing Pipeline: Test end-to-end publishing workflows seamlessly with example keys',
+      'Enhanced Diagnostic Payload: Real-time response inspection and Open Cloud error diagnostics'
+    ],
+    details: [
+      'Implemented automated place provisioning via Roblox Open Cloud Universes Places API (v1).',
+      'Eliminated the requirement of manually searching for and inputting Place IDs; simply provide your Universe ID.',
+      'Added an Auto-Create Place toggle (enabled by default) that handles place allocation during the publish step.',
+      'Added immediate "Create Now" button in the target configuration for instant place creation preview.',
+      'Added Simulate Demo mode allowing developers testing with example credentials to experience the full deployment lifecycle without authentication failures.',
+      'Improved server error handling with friendly guidance on required Open Cloud permissions.'
+    ]
+  },
+  {
     version: 'v1.5.0',
     date: '2026-09-09',
     title: 'Gemini 3.6 Flash Engine & Custom API Key Settings',

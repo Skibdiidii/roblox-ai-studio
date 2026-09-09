@@ -77,6 +77,7 @@ export interface ValidationResult {
 export interface RobloxConfig {
   universeId: string;
   placeId: string;
+  autoCreatePlace?: boolean;
   apiKeyConfigured: boolean;
   status: 'NEEDS_CONFIGURATION' | 'READY' | 'PUBLISHING' | 'PUBLISHED' | 'FAILED';
   lastPublishMessage: string;

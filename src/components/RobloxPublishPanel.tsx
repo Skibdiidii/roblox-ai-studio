@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RobloxConfig, Project } from '../types';
 import {
   Cloud,
@@ -12,7 +12,10 @@ import {
   Key,
   Globe,
   Radio,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  Layers,
+  Wand2
 } from 'lucide-react';
 
 interface RobloxPublishPanelProps {
@@ -21,9 +24,12 @@ interface RobloxPublishPanelProps {
   onUpdateConfig: (updated: Partial<RobloxConfig>) => void;
   onTestConnection: () => Promise<void>;
   onPublish: () => Promise<void>;
+  onSimulatePublish: () => Promise<void>;
+  onCreatePlaceNow: () => Promise<void>;
   onExport: () => void;
   isPublishing: boolean;
   isTesting: boolean;
+  isCreatingPlace: boolean;
   validationErrorCount: number;
 }
 
@@ -33,20 +39,37 @@ export function RobloxPublishPanel({
   onUpdateConfig,
   onTestConnection,
   onPublish,
+  onSimulatePublish,
+  onCreatePlaceNow,
   onExport,
   isPublishing,
   isTesting,
+  isCreatingPlace,
   validationErrorCount
 }: RobloxPublishPanelProps) {
-  const [universeId, setUniverseId] = useState(config.universeId);
-  const [placeId, setPlaceId] = useState(config.placeId);
+  const [universeId, setUniverseId] = useState(config.universeId || '');
+  const [placeId, setPlaceId] = useState(config.placeId || '');
+  const [autoCreatePlace, setAutoCreatePlace] = useState(config.autoCreatePlace ?? true);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    setUniverseId(config.universeId || '');
+    setPlaceId(config.placeId || '');
+    if (config.autoCreatePlace !== undefined) {
+      setAutoCreatePlace(config.autoCreatePlace);
+    }
+  }, [config]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateConfig({ universeId, placeId });
+    onUpdateConfig({ universeId, placeId, autoCreatePlace });
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 2500);
+  };
+
+  const handleToggleAutoCreate = (checked: boolean) => {
+    setAutoCreatePlace(checked);
+    onUpdateConfig({ universeId, placeId, autoCreatePlace: checked });
   };
 
   const getStatusBadge = () => {
@@ -76,7 +99,7 @@ export function RobloxPublishPanel({
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950 border border-rose-700 text-rose-400 font-bold text-xs">
             <XCircle className="w-3.5 h-3.5" />
-            <span>FAILED</span>
+            <span>ATTENTION / ERROR</span>
           </div>
         );
       case 'NEEDS_CONFIGURATION':
@@ -84,7 +107,7 @@ export function RobloxPublishPanel({
         return (
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950 border border-amber-700 text-amber-400 font-bold text-xs">
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>NEEDS CONFIGURATION</span>
+            <span>NEEDS UNIVERSE ID</span>
           </div>
         );
     }
@@ -98,8 +121,13 @@ export function RobloxPublishPanel({
             <Cloud className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-100">Roblox Open Cloud Integration</h2>
-            <p className="text-xs text-slate-400">Official Creator Open Cloud v1 Publishing & Asset Management</p>
+            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+              <span>Roblox Open Cloud Integration</span>
+              <span className="px-2 py-0.5 rounded bg-red-950 border border-red-800 text-red-400 text-[10px] font-mono uppercase">
+                v1 Automation
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400">Automated Place Creation & Cloud Version Publishing</p>
           </div>
         </div>
         {getStatusBadge()}
@@ -108,19 +136,23 @@ export function RobloxPublishPanel({
       <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-4 space-y-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
           <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Security Notice: Official Open Cloud Protocols Only</span>
+          <span>Security & Open Cloud Architecture</span>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
-          This studio never requests or stores Roblox passwords or .ROBLOSECURITY cookies. All Open Cloud operations are dispatched via server-side HTTPS proxy directly to <code className="text-slate-300">apis.roblox.com</code>.
+          Roblox AI Studio communicates securely via server-side proxy directly to <code className="text-slate-300">apis.roblox.com</code>. Instead of requiring you to manually navigate Studio to create and copy Place IDs, our pipeline automatically creates new Places inside your Universe via Open Cloud.
         </p>
-        <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
+        <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${config.apiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-            Server API Key: {config.apiKeyConfigured ? 'Configured (Server-Side)' : 'Demo / Unconfigured'}
+            API Key: {config.apiKeyConfigured ? 'Configured' : 'Demo / Unconfigured'}
           </span>
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${validationErrorCount === 0 ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-            Validation: {validationErrorCount === 0 ? 'Passed (0 Errors)' : `${validationErrorCount} Unresolved Error(s)`}
+            Validation: {validationErrorCount === 0 ? 'Passed (0 Errors)' : `${validationErrorCount} Error(s)`}
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+            Mode: {autoCreatePlace ? 'Auto-Create Place' : 'Manual Place ID'}
           </span>
         </div>
       </div>
@@ -129,7 +161,7 @@ export function RobloxPublishPanel({
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
             <Globe className="w-4 h-4 text-indigo-400" />
-            <span>Target Experience Identifiers</span>
+            <span>Target Experience Configuration</span>
           </h3>
           <a
             href="https://create.roblox.com/dashboard/creations"
@@ -142,9 +174,34 @@ export function RobloxPublishPanel({
           </a>
         </div>
 
+        <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-900/60 flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-indigo-200">Auto-Create New Place</span>
+              <span className="px-1.5 py-0.2 bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded text-[9px] font-mono uppercase font-bold">
+                Recommended
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Automatically creates a new place in your Universe when publishing. No manual Place ID entry required.
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <input
+              type="checkbox"
+              checked={autoCreatePlace}
+              onChange={(e) => handleToggleAutoCreate(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+          </label>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Universe ID (Experience ID)</label>
+            <label className="block text-slate-300 font-medium mb-1">
+              Universe ID (Experience ID) <span className="text-rose-400">*</span>
+            </label>
             <input
               id="input-roblox-universe-id"
               type="text"
@@ -153,20 +210,51 @@ export function RobloxPublishPanel({
               onChange={(e) => setUniverseId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Found in Experience Settings on Roblox Creator Dashboard</p>
+            <p className="text-[11px] text-slate-500 mt-1">Found in Experience Overview on Roblox Creator Dashboard</p>
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Place ID (Starter Place ID)</label>
-            <input
-              id="input-roblox-place-id"
-              type="text"
-              placeholder="e.g. 9876543210"
-              value={placeId}
-              onChange={(e) => setPlaceId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
-            />
-            <p className="text-[11px] text-slate-500 mt-1">The primary starter place in your universe</p>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-300 font-medium">Place ID</label>
+              {autoCreatePlace && (
+                <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5" />
+                  Auto-allocated
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="input-roblox-place-id"
+                type="text"
+                placeholder={autoCreatePlace ? '(Auto-generated on Publish)' : 'e.g. 9876543210'}
+                value={placeId}
+                disabled={autoCreatePlace && !placeId}
+                onChange={(e) => setPlaceId(e.target.value)}
+                className={`flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono ${
+                  autoCreatePlace && !placeId ? 'opacity-70 bg-slate-950/60 cursor-not-allowed' : ''
+                }`}
+              />
+              {autoCreatePlace && universeId && (
+                <button
+                  type="button"
+                  onClick={onCreatePlaceNow}
+                  disabled={isCreatingPlace || !universeId}
+                  className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium shrink-0 flex items-center gap-1 border border-slate-700"
+                  title="Create Place immediately before publishing"
+                >
+                  {isCreatingPlace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-cyan-400" />}
+                  <span>Create Now</span>
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              {autoCreatePlace
+                ? placeId
+                  ? 'Active Place allocated for this game project.'
+                  : 'Place will be automatically created in your Universe on Publish.'
+                : 'Target Place ID in your universe.'}
+            </p>
           </div>
         </div>
 
@@ -186,11 +274,11 @@ export function RobloxPublishPanel({
             id="btn-roblox-test-conn"
             type="button"
             onClick={onTestConnection}
-            disabled={isTesting || (!universeId && !config.universeId)}
+            disabled={isTesting || !universeId}
             className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-            <span>Test Open Cloud Connection</span>
+            <span>Test Universe Connection</span>
           </button>
         </div>
       </form>
@@ -203,18 +291,21 @@ export function RobloxPublishPanel({
 
         <div className="p-3.5 rounded-md bg-slate-950 border border-slate-800/90 text-xs space-y-2">
           <div className="flex items-center justify-between text-slate-300">
-            <span>Last Response / Log:</span>
+            <span>Last Response / Activity Log:</span>
             {config.lastPublishedAt && (
               <span className="text-[11px] text-slate-500 font-mono">{config.lastPublishedAt}</span>
             )}
           </div>
-          <div className="font-mono text-slate-400 bg-slate-900 p-2.5 rounded border border-slate-800/80 break-all text-[11px]">
+          <div className="font-mono text-slate-300 bg-slate-900 p-2.5 rounded border border-slate-800/80 break-all text-[11px] leading-relaxed">
             {config.lastPublishMessage}
           </div>
           {config.rawApiDetails && (
-            <pre className="text-[10px] text-slate-500 bg-slate-900/80 p-2 rounded overflow-x-auto">
-              {config.rawApiDetails}
-            </pre>
+            <div className="space-y-1 pt-1">
+              <span className="text-[10px] uppercase text-slate-500 font-mono font-semibold">Diagnostic Payload:</span>
+              <pre className="text-[10px] text-slate-400 bg-slate-900/80 p-2 rounded overflow-x-auto font-mono">
+                {config.rawApiDetails}
+              </pre>
+            </div>
           )}
         </div>
 
@@ -227,7 +318,25 @@ export function RobloxPublishPanel({
             className="flex-1 min-w-[200px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-md bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs font-bold transition-colors shadow"
           >
             {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
-            <span>{isPublishing ? 'Publishing to Roblox Open Cloud...' : 'Publish to Roblox Open Cloud'}</span>
+            <span>
+              {isPublishing
+                ? 'Auto-creating Place & Publishing...'
+                : autoCreatePlace
+                ? 'Auto-Create Place & Publish'
+                : 'Publish to Place'}
+            </span>
+          </button>
+
+          <button
+            id="btn-roblox-simulate-demo"
+            type="button"
+            onClick={onSimulatePublish}
+            disabled={isPublishing}
+            className="flex items-center gap-2 py-2.5 px-4 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-semibold transition-colors border border-cyan-800/60"
+            title="Test the complete auto-create and publishing flow with simulated responses"
+          >
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <span>Simulate Demo (Example Key)</span>
           </button>
 
           <button
