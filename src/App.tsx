@@ -45,8 +45,8 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.preferredModel === 'gemini-3.6-flash') {
-          parsed.preferredModel = 'gemini-3.8-flash';
+        if (!parsed.preferredModel || parsed.preferredModel === 'gemini-3.6-flash' || parsed.preferredModel === 'gemini-3.8-flash') {
+          parsed.preferredModel = 'gemini-flash-latest';
         }
         return parsed;
       } catch (e) {}
@@ -54,7 +54,7 @@ export default function App() {
     return {
       geminiApiKey: '',
       robloxApiKey: '',
-      preferredModel: 'gemini-3.8-flash'
+      preferredModel: 'gemini-flash-latest'
     };
   });
 
@@ -88,7 +88,7 @@ export default function App() {
     {
       id: 'welcome-msg',
       sender: 'ai',
-      content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Gemini 3.8 Flash.
+      content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Gemini.
 
 You can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
       timestamp: Date.now()

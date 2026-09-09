@@ -13,8 +13,9 @@ const __dirname = path.dirname(__filename);
 const PORT = 3000;
 
 function normalizeModel(model?: string): string {
-  if (!model) return 'gemini-3.8-flash';
-  if (model === 'gemini-3.6-flash') return 'gemini-3.8-flash';
+  if (!model) return 'gemini-flash-latest';
+  if (model === 'gemini-3.6-flash') return 'gemini-flash-latest';
+  if (model === 'gemini-3.8-flash') return 'gemini-flash-latest';
   return model;
 }
 
@@ -36,29 +37,21 @@ function getGeminiClient(customKey?: string): GoogleGenAI | null {
 async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
   const normPref = normalizeModel(preferredModel);
   const candidateModels = Array.from(
-    new Set([normPref, 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'].filter(Boolean))
+    new Set([normPref, 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter(Boolean))
   );
   let lastError: any = null;
 
   for (const model of candidateModels) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents
-        });
-        return response;
-      } catch (err: any) {
-        lastError = err;
-        const msg = err?.message || String(err);
-        const isTransient = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
-        console.error(`Gemini generation attempt ${attempt + 1} with ${model} failed:`, msg);
-        if (isTransient && attempt === 0) {
-          await sleep(750);
-        } else {
-          break;
-        }
-      }
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents
+      });
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message || String(err);
+      console.warn(`Gemini generation with ${model} unavailable, falling back to next model:`, msg);
     }
   }
   throw lastError;
@@ -67,31 +60,28 @@ async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: strin
 async function* streamGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
   const normPref = normalizeModel(preferredModel);
   const candidateModels = Array.from(
-    new Set([normPref, 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'].filter(Boolean))
+    new Set([normPref, 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter(Boolean))
   );
   let lastError: any = null;
 
   for (const model of candidateModels) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const responseStream = await ai.models.generateContentStream({
-          model,
-          contents
-        });
-        for await (const chunk of responseStream) {
-          yield chunk;
-        }
-        return;
-      } catch (err: any) {
-        lastError = err;
-        const msg = err?.message || String(err);
-        const isTransient = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
-        console.error(`Gemini stream attempt ${attempt + 1} with ${model} failed:`, msg);
-        if (isTransient && attempt === 0) {
-          await sleep(750);
-        } else {
-          break;
-        }
+    let yieldedAny = false;
+    try {
+      const responseStream = await ai.models.generateContentStream({
+        model,
+        contents
+      });
+      for await (const chunk of responseStream) {
+        yieldedAny = true;
+        yield chunk;
+      }
+      return;
+    } catch (err: any) {
+      lastError = err;
+      const msg = err?.message || String(err);
+      console.warn(`Gemini stream with ${model} unavailable, falling back to next model:`, msg);
+      if (yieldedAny) {
+        throw err;
       }
     }
   }
@@ -119,7 +109,7 @@ async function startServer() {
       status: 'ok',
       hasGemini: !!process.env.GEMINI_API_KEY,
       hasRobloxKey: !!process.env.ROBLOX_OPEN_CLOUD_API_KEY,
-      defaultModel: 'gemini-3.8-flash'
+      defaultModel: 'gemini-flash-latest'
     });
   });
 

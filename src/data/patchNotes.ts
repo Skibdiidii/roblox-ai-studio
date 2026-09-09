@@ -2,6 +2,24 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.9.2',
+    date: '2026-09-09',
+    title: 'Instant High-Demand Fallback & Zero-Downtime Multi-Model Engine',
+    tag: 'Hotfix',
+    highlights: [
+      'Instant Model Fallback: Immediate failover to high-availability gemini-flash-latest upon upstream high demand',
+      'Cascade Tier Routing: Multi-tier cascade routing through gemini-flash-latest, gemini-3.1-flash-lite, and gemini-3.8-flash',
+      'Zero-Latency Recovery: Removed redundant retry stalls on overloaded models to deliver instant generation',
+      'Seamless Architecture: Uninterrupted script synthesis, architecture planning, and multimodal analysis'
+    ],
+    details: [
+      'Configured instant failover across high-availability Gemini models so that upstream 503 high-demand spikes on any single tier are seamlessly bypassed.',
+      'Updated default reasoning model to high-stability gemini-flash-latest with gemini-3.1-flash-lite fallback.',
+      'Refined streaming generator to maintain state consistency and avoid dropped or duplicate chunks.',
+      'Maintained full historical changelog with continuous auto-scrolling to review all previous patches.'
+    ]
+  },
+  {
     version: 'v1.9.1',
     date: '2026-09-09',
     title: 'High-Demand Resiliency, Automatic Model Failover & AI Reliability Engine',
