@@ -1,0 +1,6 @@
+{
+  "name": "Roblox AI Studio",
+  "description": "Browser-based AI development environment for generating, editing, 3D previewing, validating, exporting, and publishing Roblox games to Roblox Open Cloud.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
