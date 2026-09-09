@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Project, ProjectFile, ChatMessage, GamePlan, ValidationResult, PreviewElement, ApiSettings, AppView } from './types';
+import { Project, ProjectFile, ChatMessage, GamePlan, ValidationResult, ApiSettings, AppView, ChatAttachment } from './types';
 import { GAME_TEMPLATES, GameTemplate } from './data/templates';
 import { validateRobloxProject } from './utils/validator';
 import { exportProjectZip, downloadBlob, downloadSingleFile } from './utils/exporter';
@@ -7,14 +7,12 @@ import { Header } from './components/Header';
 import { FileExplorer } from './components/FileExplorer';
 import { CodeEditor } from './components/CodeEditor';
 import { AIChat } from './components/AIChat';
-import { Web3DPreview } from './components/Web3DPreview';
-import { ChatAndPreview } from './components/ChatAndPreview';
 import { ValidationPanel } from './components/ValidationPanel';
 import { RobloxPublishPanel } from './components/RobloxPublishPanel';
 import { ProjectDashboard } from './components/ProjectDashboard';
 import { PatchNotesModal } from './components/PatchNotesModal';
 import { ApiSettingsModal } from './components/ApiSettingsModal';
-import { X, Box, Sparkles, FolderPlus } from 'lucide-react';
+import { X, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>(() => {
@@ -23,8 +21,7 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const validProjects = parsed.filter(p => p && p.id && p.id !== 'anime-sim-01');
-          return validProjects;
+          return parsed.filter(p => p && p.id && p.id !== 'anime-sim-01');
         }
       } catch (e) {}
     }
@@ -58,7 +55,7 @@ export default function App() {
   });
 
   const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<AppView>('chat-preview');
+  const [currentView, setCurrentView] = useState<AppView>('chat');
   const [activeFilePath, setActiveFilePath] = useState<string>('');
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [stage, setStage] = useState<number>(1);
@@ -67,7 +64,6 @@ export default function App() {
   const [isTestingRoblox, setIsTestingRoblox] = useState(false);
   const [isCreatingPlace, setIsCreatingPlace] = useState(false);
   const [isPatchNotesOpen, setIsPatchNotesOpen] = useState(true);
-  const [showSidePreview, setShowSidePreview] = useState(true);
 
   const activeProject = useMemo(() => {
     if (!projects.length) return null;
@@ -90,9 +86,7 @@ export default function App() {
       sender: 'ai',
       content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Gemini 3.6 Flash.
 
-Describe any Roblox game you want to build (e.g., an anime simulator, an obby with moving platforms, a tower defense game, or a survival island), and I will architect the complete client-server project structure, Luau scripts, and 3D preview scene.
-
-You can also browse starter templates in the Dashboard or configure custom API keys in the top bar.`,
+You can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
       timestamp: Date.now()
     }
   ]);
@@ -183,11 +177,12 @@ You can also browse starter templates in the Dashboard or configure custom API k
     }
   };
 
-  const handleSendMessage = async (prompt: string) => {
+  const handleSendMessage = async (prompt: string, attachments?: ChatAttachment[]) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
       content: prompt,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined,
       timestamp: Date.now()
     };
 
@@ -221,6 +216,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
           prompt,
           mode: isModification ? 'modify' : 'plan',
           project: isModification ? activeProject : undefined,
+          attachments: attachments || [],
           preferredModel: apiSettings.preferredModel
         })
       });
@@ -262,7 +258,6 @@ You can also browse starter templates in the Dashboard or configure custom API k
           }
 
           const payloadStr = dataLines.join('\n').trim();
-
           if (!payloadStr) continue;
 
           try {
@@ -313,7 +308,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
                       m.id === aiMsgId
                         ? {
                             ...m,
-                            content: data.explanation || m.content || `I've created an architectural plan for "${plan.title}". Review the gameplay loop, systems, and remotes below. When you're ready, click "Approve & Generate Files".`,
+                            content: data.explanation || m.content || `Architectural plan ready for "${plan.title}". Review the specifications below and approve to generate the Luau code.`,
                             plan: plan,
                             isThinking: false,
                             isStreaming: false
@@ -332,8 +327,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
                     files: {
                       ...prev.files,
                       ...data.files
-                    },
-                    previewElements: data.previewElements || prev.previewElements
+                    }
                   }));
 
                   if (modifiedFilePaths.length > 0) {
@@ -367,8 +361,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
                 )
               );
             }
-          } catch (e) {
-          }
+          } catch (e) {}
         }
       }
     } catch (err: any) {
@@ -421,10 +414,6 @@ You can also browse starter templates in the Dashboard or configure custom API k
 
       const data = await response.json();
       const generatedFiles: Record<string, ProjectFile> = data.files || {};
-      const previewElements: PreviewElement[] = data.previewElements || [
-        { id: 'floor-1', name: 'Baseplate', type: 'arena', position: [0, 0.5, 0], size: [60, 1, 60], color: '#3b82f6', shape: 'cylinder' },
-        { id: 'spawn-1', name: 'SpawnLocation', type: 'spawn', position: [0, 1.2, -20], size: [6, 0.4, 6], color: '#10b981', shape: 'box', label: 'Spawn' }
-      ];
 
       const newProjectId = `proj-${Date.now()}`;
       const newProject: Project = {
@@ -435,7 +424,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         plan,
         lastModified: Date.now(),
         files: generatedFiles,
-        previewElements,
+        previewElements: [],
         validationIssues: [],
         chatHistory: [],
         robloxConfig: {
@@ -451,32 +440,48 @@ You can also browse starter templates in the Dashboard or configure custom API k
 
       setProjects(prev => [newProject, ...prev]);
       setActiveProjectId(newProjectId);
+      setStage(4);
 
-      const fileKeys = Object.keys(generatedFiles);
-      if (fileKeys.length > 0) {
-        setActiveFilePath(fileKeys[0]);
-        setOpenTabs(fileKeys.slice(0, 4));
+      const filePaths = Object.keys(generatedFiles);
+      if (filePaths.length > 0) {
+        setActiveFilePath(filePaths[0]);
+        setOpenTabs(filePaths.slice(0, 4));
       }
 
-      setStage(4);
-      setCurrentView('editor');
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `ai-files-${Date.now()}`,
+          sender: 'ai',
+          content: `All production-ready Luau scripts and architecture for "${plan.title}" have been successfully created (${filePaths.length} files).\n\nYou can switch to the Code Editor from the hamburger menu to inspect scripts, validate logic, or publish directly to Roblox Open Cloud.`,
+          modifiedFiles: filePaths,
+          timestamp: Date.now()
+        }
+      ]);
 
-      const confirmedMsg: ChatMessage = {
-        id: `ai-approved-${Date.now()}`,
-        sender: 'ai',
-        content: `Generated ${fileKeys.length} Luau source files and 3D preview scene for "${plan.title}". All scripts have been loaded into your editor!`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, confirmedMsg]);
+      setCurrentView('editor');
     } catch (err: any) {
-      alert(`File generation error: ${err.message}`);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `ai-error-${Date.now()}`,
+          sender: 'ai',
+          content: `Failed to generate project files: ${err.message}. Please try again or check your API key in API Settings.`,
+          timestamp: Date.now()
+        }
+      ]);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCodeAction = async (action: string, code: string, filePath: string) => {
+  const handleCodeAction = async (action: string, prompt?: string) => {
+    if (!activeProject || !activeFilePath) return;
+    const currentFile = activeProject.files[activeFilePath];
+    if (!currentFile) return;
+
     setIsGenerating(true);
+
     try {
       const response = await fetch('/api/ai/code-action', {
         method: 'POST',
@@ -486,100 +491,143 @@ You can also browse starter templates in the Dashboard or configure custom API k
         },
         body: JSON.stringify({
           action,
-          code,
-          filePath,
+          prompt,
+          currentFile,
+          allFiles: activeProject.files,
           preferredModel: apiSettings.preferredModel
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`AI Code Action returned ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error('Code action failed');
       const data = await response.json();
-      if (data.code) {
-        handleUpdateFileContent(filePath, data.code);
+
+      if (data.modifiedContent) {
+        handleUpdateFileContent(activeFilePath, data.modifiedContent);
       }
 
-      setCurrentView('chat');
-      const actionMsg: ChatMessage = {
-        id: `ai-action-${Date.now()}`,
-        sender: 'ai',
-        content: `**Action: ${action.toUpperCase()} on ${filePath}**\n\n${data.explanation || 'Updated the code.'}`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, actionMsg]);
+      if (data.explanation) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `ai-action-${Date.now()}`,
+            sender: 'ai',
+            content: `**${action.toUpperCase()}** on \`${currentFile.name}\`:\n\n${data.explanation}`,
+            modifiedFiles: [activeFilePath],
+            timestamp: Date.now()
+          }
+        ]);
+      }
     } catch (err: any) {
-      alert(`AI action failed: ${err.message}`);
+      console.error(err);
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleFixIssueWithAI = (issue: ValidationResult) => {
-    if (!activeProject) return;
+  const handleFixIssueWithAI = async (issue: ValidationResult) => {
+    if (!activeProject || !issue.file) return;
     const file = activeProject.files[issue.file];
-    if (file) {
-      handleCodeAction('fix', file.content, issue.file);
-    } else {
-      handleSendMessage(`Please fix this project validation issue: ${issue.problem} in ${issue.file}`);
-      setCurrentView('chat');
+    if (!file) return;
+
+    setActiveFilePath(issue.file);
+    if (!openTabs.includes(issue.file)) setOpenTabs(prev => [...prev, issue.file]);
+    setCurrentView('editor');
+
+    await handleCodeAction('fix', `Fix this validation issue: ${issue.problem} at line ${issue.line || 1}`);
+  };
+
+  const handleNewProject = () => {
+    setStage(1);
+    setCurrentPlan(null);
+    setCurrentView('chat');
+  };
+
+  const handleDuplicateProject = (project: Project) => {
+    const duplicated: Project = {
+      ...project,
+      id: `proj-${Date.now()}`,
+      name: `${project.name} (Copy)`,
+      lastModified: Date.now()
+    };
+    setProjects(prev => [duplicated, ...prev]);
+    setActiveProjectId(duplicated.id);
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    setProjects(prev => prev.filter(p => p.id !== projectId));
+    if (activeProjectId === projectId) {
+      const remaining = projects.filter(p => p.id !== projectId);
+      setActiveProjectId(remaining.length > 0 ? remaining[0].id : '');
     }
   };
 
-  const handleExportProject = async (proj?: Project) => {
-    const target = proj || activeProject;
-    if (!target) return;
-    try {
-      const blob = await exportProjectZip(target);
-      const filename = `${target.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-roblox-project.zip`;
-      downloadBlob(blob, filename);
-    } catch (err: any) {
-      alert(`Failed to export ZIP: ${err.message}`);
-    }
+  const handleExportProject = async (projectOrFormat?: Project | 'zip' | 'rojo' | 'rbxlx') => {
+    const targetProject = (typeof projectOrFormat === 'object' && projectOrFormat !== null) ? projectOrFormat : activeProject;
+    if (!targetProject) return;
+    const blob = await exportProjectZip(targetProject);
+    downloadBlob(blob, `${targetProject.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-project.zip`);
   };
 
-  const handlePublishToRoblox = async () => {
-    if (!activeProject) return;
-    setIsPublishing(true);
-    updateActiveProject(prev => ({
-      ...prev,
+  const handleSelectTemplate = (template: GameTemplate) => {
+    const newProjectId = `proj-${Date.now()}`;
+    const newProject: Project = {
+      id: newProjectId,
+      name: template.name,
+      description: template.description,
+      stage: 4,
+      plan: template.plan,
+      lastModified: Date.now(),
+      files: template.files,
+      previewElements: [],
+      validationIssues: [],
+      chatHistory: [],
       robloxConfig: {
-        ...prev.robloxConfig,
-        status: 'PUBLISHING',
-        lastPublishMessage: prev.robloxConfig.autoCreatePlace
-          ? 'Auto-creating new Place in Universe and publishing game payload...'
-          : 'Sending request to Roblox Open Cloud Place Publishing API...'
+        universeId: '',
+        placeId: '',
+        autoCreatePlace: true,
+        status: 'NEEDS_CONFIGURATION',
+        apiKeyConfigured: false,
+        lastPublishMessage: 'Initialized from template: ' + template.name,
+        lastPublishedAt: null
       }
-    }));
+    };
 
+    setProjects(prev => [newProject, ...prev]);
+    setActiveProjectId(newProjectId);
+    setStage(4);
+
+    const fileKeys = Object.keys(template.files);
+    if (fileKeys.length > 0) {
+      setActiveFilePath(fileKeys[0]);
+      setOpenTabs(fileKeys.slice(0, 4));
+    }
+
+    setCurrentView('editor');
+  };
+
+  const handleTestRobloxConnection = async () => {
+    if (!activeProject) return;
+    setIsTestingRoblox(true);
     try {
-      const response = await fetch('/api/roblox/publish', {
+      const response = await fetch('/api/roblox/test-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(apiSettings.robloxApiKey ? { 'x-roblox-api-key': apiSettings.robloxApiKey } : {})
         },
         body: JSON.stringify({
-          universeId: activeProject.robloxConfig.universeId,
-          placeId: activeProject.robloxConfig.placeId,
-          autoCreatePlace: activeProject.robloxConfig.autoCreatePlace ?? true,
-          projectName: activeProject.name,
-          files: activeProject.files
+          universeId: activeProject.robloxConfig.universeId
         })
       });
 
       const data = await response.json();
-
       updateActiveProject(prev => ({
         ...prev,
         robloxConfig: {
           ...prev.robloxConfig,
-          status: data.status,
-          placeId: data.placeId || prev.robloxConfig.placeId,
-          lastPublishedAt: new Date().toLocaleString(),
-          lastPublishMessage: data.message,
-          rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+          status: data.success ? 'READY' : 'FAILED',
+          apiKeyConfigured: data.configured,
+          lastPublishMessage: data.message
         }
       }));
     } catch (err: any) {
@@ -588,57 +636,11 @@ You can also browse starter templates in the Dashboard or configure custom API k
         robloxConfig: {
           ...prev.robloxConfig,
           status: 'FAILED',
-          lastPublishMessage: `Publishing network error: ${err.message}`
+          lastPublishMessage: `Connection test error: ${err.message}`
         }
       }));
     } finally {
-      setIsPublishing(false);
-    }
-  };
-
-  const handleSimulateRobloxPublish = async () => {
-    if (!activeProject) return;
-    setIsPublishing(true);
-    try {
-      const response = await fetch('/api/roblox/publish', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          universeId: activeProject.robloxConfig.universeId || '1234567890',
-          placeId: activeProject.robloxConfig.placeId,
-          autoCreatePlace: true,
-          projectName: activeProject.name,
-          files: activeProject.files,
-          simulate: true
-        })
-      });
-
-      const data = await response.json();
-
-      updateActiveProject(prev => ({
-        ...prev,
-        robloxConfig: {
-          ...prev.robloxConfig,
-          status: data.status,
-          placeId: data.placeId || prev.robloxConfig.placeId,
-          lastPublishedAt: new Date().toLocaleString(),
-          lastPublishMessage: data.message,
-          rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
-        }
-      }));
-    } catch (err: any) {
-      updateActiveProject(prev => ({
-        ...prev,
-        robloxConfig: {
-          ...prev.robloxConfig,
-          status: 'FAILED',
-          lastPublishMessage: `Simulation error: ${err.message}`
-        }
-      }));
-    } finally {
-      setIsPublishing(false);
+      setIsTestingRoblox(false);
     }
   };
 
@@ -654,7 +656,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         },
         body: JSON.stringify({
           universeId: activeProject.robloxConfig.universeId,
-          projectName: activeProject.name,
+          title: activeProject.name,
           description: activeProject.description
         })
       });
@@ -665,9 +667,8 @@ You can also browse starter templates in the Dashboard or configure custom API k
           ...prev,
           robloxConfig: {
             ...prev.robloxConfig,
-            placeId: data.placeId,
-            lastPublishMessage: data.message,
-            rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+            placeId: String(data.placeId),
+            lastPublishMessage: `Place created successfully! Place ID: ${data.placeId}`
           }
         }));
       } else {
@@ -675,23 +676,29 @@ You can also browse starter templates in the Dashboard or configure custom API k
           ...prev,
           robloxConfig: {
             ...prev.robloxConfig,
-            lastPublishMessage: data.message,
-            rawApiDetails: data.details ? JSON.stringify(data.details, null, 2) : undefined
+            lastPublishMessage: data.error || 'Failed to auto-create place'
           }
         }));
       }
     } catch (err: any) {
-      alert(`Error creating place: ${err.message}`);
+      updateActiveProject(prev => ({
+        ...prev,
+        robloxConfig: {
+          ...prev.robloxConfig,
+          lastPublishMessage: `Create Place error: ${err.message}`
+        }
+      }));
     } finally {
       setIsCreatingPlace(false);
     }
   };
 
-  const handleTestRobloxConnection = async () => {
+  const handlePublishToRoblox = async (versionType: 'Saved' | 'Published' = 'Published') => {
     if (!activeProject) return;
-    setIsTestingRoblox(true);
+    setIsPublishing(true);
+
     try {
-      const response = await fetch('/api/roblox/status', {
+      const response = await fetch('/api/roblox/publish-place', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -700,152 +707,77 @@ You can also browse starter templates in the Dashboard or configure custom API k
         body: JSON.stringify({
           universeId: activeProject.robloxConfig.universeId,
           placeId: activeProject.robloxConfig.placeId,
-          autoCreatePlace: activeProject.robloxConfig.autoCreatePlace ?? true
+          versionType,
+          project: activeProject,
+          autoCreatePlace: activeProject.robloxConfig.autoCreatePlace
         })
       });
 
       const data = await response.json();
+      if (data.success) {
+        updateActiveProject(prev => ({
+          ...prev,
+          robloxConfig: {
+            ...prev.robloxConfig,
+            status: 'PUBLISHED',
+            placeId: data.placeId ? String(data.placeId) : prev.robloxConfig.placeId,
+            lastPublishedAt: new Date().toLocaleTimeString(),
+            lastPublishMessage: `Published successfully! VersionNumber: ${data.versionNumber || 1} (Place ID: ${data.placeId || prev.robloxConfig.placeId})`
+          }
+        }));
+      } else {
+        updateActiveProject(prev => ({
+          ...prev,
+          robloxConfig: {
+            ...prev.robloxConfig,
+            status: 'FAILED',
+            lastPublishMessage: `Publish failed: ${data.error || 'Check permissions or API key'}`
+          }
+        }));
+      }
+    } catch (err: any) {
       updateActiveProject(prev => ({
         ...prev,
         robloxConfig: {
           ...prev.robloxConfig,
-          apiKeyConfigured: data.configured,
-          status: data.configured ? 'READY' : 'NEEDS_CONFIGURATION',
-          lastPublishMessage: data.message
+          status: 'FAILED',
+          lastPublishMessage: `Publish exception: ${err.message}`
         }
       }));
-    } catch (err: any) {
-      alert(`Connection test failed: ${err.message}`);
     } finally {
-      setIsTestingRoblox(false);
+      setIsPublishing(false);
     }
   };
 
-  const handleSelectTemplate = (template: GameTemplate) => {
-    const newId = `template-${template.id}-${Date.now()}`;
-    const newProject: Project = {
-      id: newId,
-      name: template.name,
-      description: template.description,
-      stage: 4,
-      plan: template.plan,
-      lastModified: Date.now(),
-      files: template.files,
-      previewElements: template.previewElements,
-      validationIssues: [],
-      chatHistory: [],
+  const handleSimulateRobloxPublish = async () => {
+    if (!activeProject) return;
+    setIsPublishing(true);
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    const simulatedPlaceId = activeProject.robloxConfig.placeId || String(Math.floor(1000000000 + Math.random() * 9000000000));
+
+    updateActiveProject(prev => ({
+      ...prev,
       robloxConfig: {
-        universeId: '',
-        placeId: '',
-        autoCreatePlace: true,
-        status: 'NEEDS_CONFIGURATION',
-        apiKeyConfigured: false,
-        lastPublishMessage: `Project initialized from ${template.name} template.`,
-        lastPublishedAt: null
+        ...prev.robloxConfig,
+        status: 'PUBLISHED',
+        placeId: simulatedPlaceId,
+        lastPublishedAt: new Date().toLocaleTimeString(),
+        lastPublishMessage: `[Demo Mode] Simulated upload of ${Object.keys(activeProject.files).length} Luau scripts to Place ${simulatedPlaceId}. VersionNumber: 2 (Simulated Success)`
       }
-    };
+    }));
 
-    setProjects(prev => [newProject, ...prev]);
-    setActiveProjectId(newId);
-    const fileKeys = Object.keys(template.files);
-    if (fileKeys.length > 0) {
-      setActiveFilePath(fileKeys[0]);
-      setOpenTabs(fileKeys.slice(0, 3));
-    }
-    setStage(4);
-    setCurrentView('editor');
+    setIsPublishing(false);
   };
 
-  const handleNewProject = () => {
-    const newId = `proj-blank-${Date.now()}`;
-    const blankFiles: Record<string, ProjectFile> = {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        content: '--!strict\nlocal Players = game:GetService("Players")\n\nPlayers.PlayerAdded:Connect(function(player)\n    print("Player joined: " .. player.Name)\nend)\n',
-        language: 'luau',
-        type: 'server'
-      },
-      'ReplicatedStorage/Remotes/Placeholder.lua': {
-        path: 'ReplicatedStorage/Remotes/Placeholder.lua',
-        name: 'Placeholder.lua',
-        content: 'return {}\n',
-        language: 'luau',
-        type: 'module'
-      },
-      'StarterPlayer/StarterPlayerScripts/ClientLoader.client.lua': {
-        path: 'StarterPlayer/StarterPlayerScripts/ClientLoader.client.lua',
-        name: 'ClientLoader.client.lua',
-        content: '--!strict\nlocal Players = game:GetService("Players")\nlocal player = Players.LocalPlayer\n\nprint("Client initialized for " .. player.Name)\n',
-        language: 'luau',
-        type: 'client'
-      }
-    };
-
-    const newBlankProj: Project = {
-      id: newId,
-      name: 'New Roblox Game',
-      description: 'Custom Roblox experience scaffolded with standard directory layout.',
-      stage: 1,
-      plan: null,
-      lastModified: Date.now(),
-      files: blankFiles,
-      previewElements: [
-        {
-          id: 'spawn-pad-01',
-          name: 'SpawnLocation',
-          type: 'spawn',
-          position: [0, 0.5, 0],
-          size: [10, 1, 10],
-          color: '#059669',
-          shape: 'box'
-        }
-      ],
-      validationIssues: [],
-      chatHistory: [],
-      robloxConfig: {
-        universeId: '',
-        placeId: '',
-        autoCreatePlace: true,
-        status: 'NEEDS_CONFIGURATION',
-        apiKeyConfigured: false,
-        lastPublishMessage: 'Blank experience ready for development.',
-        lastPublishedAt: null
-      }
-    };
-
-    setProjects(prev => [newBlankProj, ...prev]);
-    setActiveProjectId(newId);
-    setActiveFilePath('ServerScriptService/Main.server.lua');
-    setOpenTabs(['ServerScriptService/Main.server.lua']);
-    setStage(1);
-    setCurrentView('chat');
-  };
-
-  const handleDuplicateProject = (p: Project) => {
-    const dupId = `proj-copy-${Date.now()}`;
-    const duplicate: Project = {
-      ...p,
-      id: dupId,
-      name: `${p.name} (Copy)`,
-      lastModified: Date.now()
-    };
-    setProjects(prev => [duplicate, ...prev]);
-    setActiveProjectId(dupId);
-  };
-
-  const handleDeleteProject = (id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
-    if (activeProjectId === id) {
-      const remaining = projects.filter(p => p.id !== id);
-      setActiveProjectId(remaining.length > 0 ? remaining[0].id : '');
-    }
-  };
-
-  const currentActiveFile = (activeProject && activeProject.files[activeFilePath]) ? activeProject.files[activeFilePath] : null;
+  const currentActiveFile = useMemo(() => {
+    if (!activeProject || !activeFilePath) return null;
+    return activeProject.files[activeFilePath] || null;
+  }, [activeProject, activeFilePath]);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
       <Header
         currentView={currentView}
         onSelectView={setCurrentView}
@@ -877,7 +809,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
         )}
 
         {currentView === 'chat' && (
-          <div className="flex-1 p-4 overflow-hidden">
+          <div className="flex-1 p-3 sm:p-4 overflow-hidden">
             <AIChat
               messages={messages}
               currentPlan={currentPlan}
@@ -885,21 +817,13 @@ You can also browse starter templates in the Dashboard or configure custom API k
               isGenerating={isGenerating}
               onSendMessage={handleSendMessage}
               onApprovePlan={handleApprovePlan}
-            />
-          </div>
-        )}
-
-        {currentView === 'chat-preview' && (
-          <div className="flex-1 flex overflow-hidden">
-            <ChatAndPreview
-              messages={messages}
-              currentPlan={currentPlan}
-              stage={stage}
-              isGenerating={isGenerating}
-              onSendMessage={handleSendMessage}
-              onApprovePlan={handleApprovePlan}
-              previewElements={activeProject?.previewElements || []}
-              projectName={activeProject?.name || 'Roblox Game'}
+              onOpenCodeInEditor={(path) => {
+                if (activeProject && activeProject.files[path]) {
+                  setActiveFilePath(path);
+                  if (!openTabs.includes(path)) setOpenTabs(prev => [...prev, path]);
+                  setCurrentView('editor');
+                }
+              }}
             />
           </div>
         )}
@@ -975,65 +899,20 @@ You can also browse starter templates in the Dashboard or configure custom API k
                           </div>
                         );
                       })}
-                      <div className="ml-auto flex items-center pr-2">
-                        <button
-                          id="btn-toggle-side-preview"
-                          onClick={() => setShowSidePreview(!showSidePreview)}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs transition-colors ${
-                            showSidePreview
-                              ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-                              : 'bg-slate-800 text-slate-400 hover:text-white'
-                          }`}
-                          title="Toggle Split 3D View"
-                        >
-                          <Box className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline">Split 3D</span>
-                        </button>
-                      </div>
                     </div>
                   )}
 
-                  <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-                    <div className="flex-1 min-w-0 h-full p-2">
-                      <CodeEditor
-                        file={currentActiveFile}
-                        onUpdateContent={handleUpdateFileContent}
-                        onCodeAction={handleCodeAction}
-                        onDownloadFile={downloadSingleFile}
-                      />
-                    </div>
-
-                    {showSidePreview && (
-                      <div className="h-64 lg:h-full lg:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-l border-slate-800 p-2 flex flex-col">
-                        <div className="text-[11px] font-mono text-slate-400 pb-1 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <Box className="w-3 h-3 text-emerald-400" />
-                            <span>Interactive 3D Arena</span>
-                          </span>
-                          <button
-                            onClick={() => setCurrentView('preview')}
-                            className="text-indigo-400 hover:text-indigo-300 text-[10px]"
-                          >
-                            Full Screen →
-                          </button>
-                        </div>
-                        <div className="flex-1 rounded-lg overflow-hidden border border-slate-800">
-                          <Web3DPreview elements={activeProject.previewElements || []} />
-                        </div>
-                      </div>
-                    )}
+                  <div className="flex-1 min-w-0 h-full p-2">
+                    <CodeEditor
+                      file={currentActiveFile}
+                      onUpdateContent={handleUpdateFileContent}
+                      onCodeAction={handleCodeAction}
+                      onDownloadFile={downloadSingleFile}
+                    />
                   </div>
                 </div>
               </>
             )}
-          </div>
-        )}
-
-        {currentView === 'preview' && (
-          <div className="flex-1 p-4 overflow-hidden flex flex-col">
-            <div className="flex-1 rounded-lg overflow-hidden border border-slate-800">
-              <Web3DPreview elements={activeProject?.previewElements || []} />
-            </div>
           </div>
         )}
 

@@ -18,7 +18,7 @@ function getGeminiClient(customKey?: string): GoogleGenAI | null {
   return new GoogleGenAI({ apiKey: key });
 }
 
-async function callGemini(ai: GoogleGenAI, contents: string, preferredModel?: string) {
+async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
   const candidateModels = [preferredModel, 'gemini-3.6-flash', 'gemini-3.8-flash'].filter(Boolean) as string[];
   const modelsToTry = Array.from(new Set(candidateModels));
   let lastError: any = null;
@@ -38,6 +38,29 @@ async function callGemini(ai: GoogleGenAI, contents: string, preferredModel?: st
   throw lastError;
 }
 
+async function* streamGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
+  const candidateModels = [preferredModel, 'gemini-3.6-flash', 'gemini-3.8-flash'].filter(Boolean) as string[];
+  const modelsToTry = Array.from(new Set(candidateModels));
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const responseStream = await ai.models.generateContentStream({
+        model,
+        contents
+      });
+      for await (const chunk of responseStream) {
+        yield chunk;
+      }
+      return;
+    } catch (err: any) {
+      lastError = err;
+      console.error(`Gemini stream attempt failed with ${model}:`, err.message);
+    }
+  }
+  throw lastError;
+}
+
 function resolveRobloxKey(req: express.Request): string | undefined {
   const headerKey = req.headers['x-roblox-api-key'] as string | undefined;
   const bodyKey = req.body?.robloxApiKey;
@@ -52,7 +75,7 @@ function resolveGeminiKey(req: express.Request): string | undefined {
 
 async function startServer() {
   const app = express();
-  app.use(express.json({ limit: '20mb' }));
+  app.use(express.json({ limit: '50mb' }));
 
   app.get('/api/health', (req, res) => {
     res.json({
@@ -80,9 +103,9 @@ async function startServer() {
   });
 
   app.post('/api/ai/chat-stream', async (req, res) => {
-    const { prompt, project, stage, preferredModel } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+    const { prompt, attachments, project, stage, preferredModel, mode } = req.body;
+    if (!prompt && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Prompt or attachment is required' });
     }
 
     res.setHeader('Content-Type', 'text/event-stream');
@@ -102,34 +125,108 @@ async function startServer() {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
-    const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
-    const isModification = req.body.mode === 'modify' || (stage && stage >= 4 && project && project.files && Object.keys(project.files).length > 0) || Boolean(project && project.files && Object.keys(project.files).length > 2);
-
-    send('thinking', { thought: `• Analyzing prompt: "${prompt}"`, step: `• Analyzing prompt: "${prompt}"` });
-    await sleep(250);
-
-    send('thinking', { thought: isModification ? '• Inspecting active Luau modules and architecture tree...' : '• Designing server-authoritative Luau architecture...', step: isModification ? '• Inspecting active Luau modules and architecture tree...' : '• Designing server-authoritative Luau architecture...' });
-    await sleep(280);
-
-    send('answer_chunk', { chunk: isModification ? `Processing modifications for: "${prompt}"...\n\n` : `Architecting Roblox project for: "${prompt}"...\n\n` });
-    await sleep(200);
-
-    send('thinking', { thought: '• Formulating RemoteEvents and debounce protection contracts...', step: '• Formulating RemoteEvents and debounce protection contracts...' });
-    await sleep(300);
-
-    send('answer_chunk', { chunk: '• Defining client-server network boundaries and data safety...\n' });
-    await sleep(220);
-
-    send('thinking', { thought: '• Validating DataStore leaderstats and spatial 3D elements...', step: '• Validating DataStore leaderstats and spatial 3D elements...' });
-    await sleep(300);
-
     const customKey = resolveGeminiKey(req);
     const ai = getGeminiClient(customKey);
 
-    let resultData: any = null;
+    const hasActiveFiles = Boolean(project && project.files && Object.keys(project.files).length > 0);
+    const lowerPrompt = (prompt || '').toLowerCase();
+    
+    const isExplicitCreate = lowerPrompt.startsWith('create ') ||
+      lowerPrompt.startsWith('make a ') ||
+      lowerPrompt.startsWith('build a ') ||
+      lowerPrompt.startsWith('generate ') ||
+      lowerPrompt.includes('new game') ||
+      lowerPrompt.includes('simulator') ||
+      lowerPrompt.includes('tycoon') ||
+      lowerPrompt.includes('obby');
 
-    if (isModification) {
+    const isExplicitModify = mode === 'modify' ||
+      (hasActiveFiles && (
+        lowerPrompt.includes('add ') ||
+        lowerPrompt.includes('modify ') ||
+        lowerPrompt.includes('update ') ||
+        lowerPrompt.includes('change ') ||
+        lowerPrompt.includes('fix ') ||
+        lowerPrompt.includes('refactor ') ||
+        lowerPrompt.includes('implement ')
+      ));
+
+    send('thinking', {
+      thought: '• Processing request and preparing fast Luau synthesis...',
+      step: '• Processing request and preparing fast Luau synthesis...'
+    });
+
+    const contentsPayload: any[] = [];
+
+    if (attachments && Array.isArray(attachments)) {
+      for (const att of attachments) {
+        if (att.type === 'image' && att.data) {
+          const rawBase64 = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
+          contentsPayload.push({
+            inlineData: {
+              mimeType: att.mimeType || 'image/png',
+              data: rawBase64
+            }
+          });
+        } else if (att.data) {
+          contentsPayload.push({
+            text: `[Attached File: ${att.name}]\n\`\`\`\n${att.data}\n\`\`\`\n`
+          });
+        }
+      }
+    }
+
+    if (!isExplicitCreate && !isExplicitModify && (attachments?.length > 0 || !hasActiveFiles || mode === 'freeform')) {
+      send('thinking', {
+        thought: '• Analyzing query & generating fast streaming answer...',
+        step: '• Analyzing query & generating fast streaming answer...'
+      });
+
+      const systemContext = `You are Roblox AI Studio, an elite assistant and expert Luau engineer.
+You help users with Roblox game architecture, Luau scripting, mechanics, mathematical algorithms, client-server security, UI design, DataStores, animations, and debugging.
+Answer questions directly, clearly, concisely, and provide production-ready Luau scripts when relevant.
+Format code using \`\`\`luau markdown blocks.`;
+
+      contentsPayload.push({
+        text: `${systemContext}\n\nUser Question/Message: ${prompt || 'Please inspect the attached items.'}`
+      });
+
+      if (ai) {
+        try {
+          let streamedAny = false;
+          for await (const chunk of streamGemini(ai, contentsPayload, preferredModel)) {
+            const chunkText = chunk.text;
+            if (chunkText) {
+              streamedAny = true;
+              send('answer_chunk', { chunk: chunkText });
+            }
+          }
+          send('thinking_done', {});
+          send('done', {});
+          res.end();
+          return;
+        } catch (err: any) {
+          console.error('Freeform streaming error:', err.message);
+        }
+      }
+
+      send('answer_chunk', {
+        chunk: `### Roblox AI Assistant\n\nI received your query: "${prompt || 'Attachments analyzed'}".\n\n- **Luau Engine**: Modern strict Luau support with \`task.spawn\`, \`task.wait\`, and typed annotations.\n- **Network Architecture**: ServerScriptService owns authoritative state while StarterPlayer handles client input.\n\nLet me know if you would like me to generate specific Luau scripts or architect a complete Roblox experience!`
+      });
+      send('thinking_done', {});
+      send('done', {});
+      res.end();
+      return;
+    }
+
+    if (isExplicitModify && hasActiveFiles) {
+      send('thinking', {
+        thought: '• Inspecting active Luau codebase and preparing targeted updates...',
+        step: '• Inspecting active Luau codebase and preparing targeted updates...'
+      });
+
+      let resultData: any = null;
+
       if (ai) {
         try {
           const fileSummaries = Object.entries(project.files)
@@ -137,15 +234,13 @@ async function startServer() {
             .slice(0, 6)
             .join('\n\n');
 
-          const geminiRes = await callGemini(
-            ai,
-            `You are modifying an existing Roblox Luau project called "${project.name}".
+          const modifyPrompt = `You are modifying an existing Roblox Luau project called "${project.name}".
 The user requested this change: "${prompt}".
 
 Current files in the project:
 ${fileSummaries}
 
-Respond strictly with JSON containing ONLY modified or newly created files, plus any new 3D preview elements:
+Respond strictly with JSON containing ONLY modified or newly created files:
 {
   "explanation": "A friendly 1-2 sentence explanation of what you updated or added.",
   "files": {
@@ -156,11 +251,12 @@ Respond strictly with JSON containing ONLY modified or newly created files, plus
       "language": "luau",
       "type": "server"
     }
-  },
-  "previewElements": []
-}`,
-            preferredModel
-          );
+  }
+}`;
+
+          contentsPayload.push({ text: modifyPrompt });
+
+          const geminiRes = await callGemini(ai, contentsPayload, preferredModel);
           const rawText = geminiRes.text || '';
           const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
           resultData = JSON.parse(cleanJson);
@@ -170,23 +266,22 @@ Respond strictly with JSON containing ONLY modified or newly created files, plus
       }
 
       if (!resultData) {
-        const lower = prompt.toLowerCase();
         const updatedFiles: Record<string, any> = {};
-        if (lower.includes('quest') || lower.includes('daily')) {
+        if (lowerPrompt.includes('quest') || lowerPrompt.includes('daily')) {
           updatedFiles['ServerScriptService/Systems/QuestSystem.server.lua'] = {
             path: 'ServerScriptService/Systems/QuestSystem.server.lua',
             name: 'QuestSystem.server.lua',
             language: 'luau',
             type: 'server',
-            content: `local Players = game:GetService("Players")\nlocal activeQuests = {}\nPlayers.PlayerAdded:Connect(function(player)\n    activeQuests[player] = { ["Task"] = 0 }\nend)\n`
+            content: `--!strict\nlocal Players = game:GetService("Players")\nlocal activeQuests: { [Player]: { [string]: number } } = {}\nPlayers.PlayerAdded:Connect(function(player)\n    activeQuests[player] = { ["Punch100"] = 0 }\nend)\n`
           };
-        } else if (lower.includes('boss')) {
+        } else if (lowerPrompt.includes('boss')) {
           updatedFiles['ServerScriptService/Systems/BossSystem.server.lua'] = {
             path: 'ServerScriptService/Systems/BossSystem.server.lua',
             name: 'BossSystem.server.lua',
             language: 'luau',
             type: 'server',
-            content: `local Players = game:GetService("Players")\nlocal Boss = { Name = "Demon Warlord", Health = 5000 }\n`
+            content: `--!strict\nlocal Players = game:GetService("Players")\nlocal Boss = { Name = "Demon Warlord", MaxHealth = 5000, CurrentHealth = 5000 }\n`
           };
         } else {
           updatedFiles['ServerScriptService/Systems/CustomFeature.server.lua'] = {
@@ -194,28 +289,40 @@ Respond strictly with JSON containing ONLY modified or newly created files, plus
             name: 'CustomFeature.server.lua',
             language: 'luau',
             type: 'server',
-            content: `local Players = game:GetService("Players")\nprint("[Server] Feature loaded: ${prompt.replace(/"/g, '')}")\n`
+            content: `--!strict\nlocal Players = game:GetService("Players")\nprint("[Server] Feature loaded: ${prompt.replace(/"/g, '')}")\n`
           };
         }
         resultData = {
           explanation: `I've incorporated your request: "${prompt}". Updated files have been generated with server-authoritative Luau architecture.`,
-          files: updatedFiles,
-          previewElements: project.previewElements
+          files: updatedFiles
         };
       }
-    } else {
-      if (ai) {
-        try {
-          const geminiRes = await callGemini(
-            ai,
-            `You are an expert Roblox Luau game architect. A user wants to build: "${prompt}".
+
+      send('thinking_done', {});
+      send('answer_chunk', { chunk: `\n${resultData.explanation || 'Project files successfully updated.'}` });
+      send('result', { type: 'modify', files: resultData.files, explanation: resultData.explanation });
+      send('done', {});
+      res.end();
+      return;
+    }
+
+    send('thinking', {
+      thought: '• Formulating complete Roblox game architecture plan...',
+      step: '• Formulating complete Roblox game architecture plan...'
+    });
+
+    let planData: any = null;
+
+    if (ai) {
+      try {
+        const planPrompt = `You are an expert Roblox Luau game architect. A user wants to build: "${prompt}".
 Generate a complete JSON game plan adhering strictly to this JSON format:
 {
   "title": "Game Title",
   "genre": "Genre",
-  "concept": "Concept",
+  "concept": "Concept description",
   "gameplayLoop": ["Step 1...", "Step 2...", "Step 3..."],
-  "gameSystems": [{"name": "System", "description": "...", "files": []}],
+  "gameSystems": [{"name": "System Name", "description": "...", "files": []}],
   "requiredScripts": [{"path": "ServerScriptService/Systems/Core.server.lua", "purpose": "...", "scriptType": "server"}],
   "requiredUI": [{"name": "HUD", "description": "..."}],
   "remotes": [{"name": "Action", "type": "RemoteEvent", "purpose": "..."}],
@@ -224,63 +331,51 @@ Generate a complete JSON game plan adhering strictly to this JSON format:
   "npcRequirements": [],
   "configurationValues": [{"key": "BASE_VAL", "value": 10, "description": "..."}]
 }
-Pure JSON only.`,
-            preferredModel
-          );
-          const rawText = geminiRes.text || '';
-          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-          const parsed = JSON.parse(cleanJson);
-          resultData = { plan: parsed };
-        } catch (err: any) {
-          console.error('Streaming plan error:', err.message);
-        }
-      }
+Pure JSON only.`;
 
-      if (!resultData) {
-        resultData = {
-          plan: {
-            title: prompt.length > 25 ? prompt.substring(0, 25) : prompt,
-            genre: 'Roblox Experience',
-            concept: `A custom Roblox experience based on: ${prompt}. Features server-authoritative logic, clean Luau modules, and responsive client interaction.`,
-            gameplayLoop: [
-              'Players spawn into the arena with interactive training nodes.',
-              'Engage with targets to earn currency and power.',
-              'Use earned power to unlock upgrades and prestige multipliers.',
-              'Compete on global leaderboards.'
-            ],
-            gameSystems: [
-              { name: 'Core Interaction', description: 'Server-validated input debounce', files: ['ServerScriptService/Systems/CoreSystem.server.lua'] },
-              { name: 'Progression', description: 'Exponential multiplier tracking', files: ['ServerScriptService/Systems/ProgressionSystem.server.lua'] }
-            ],
-            requiredScripts: [
-              { path: 'ServerScriptService/Systems/CoreSystem.server.lua', purpose: 'Handles player actions', scriptType: 'server' },
-              { path: 'ReplicatedStorage/Modules/Config.lua', purpose: 'Game balancing constants', scriptType: 'module' },
-              { path: 'StarterPlayer/StarterPlayerScripts/Controller.client.lua', purpose: 'Client inputs & effects', scriptType: 'client' }
-            ],
-            requiredUI: [{ name: 'HUD', description: 'Leaderstats and action triggers' }],
-            remotes: [{ name: 'PerformAction', type: 'RemoteEvent', purpose: 'Action request' }],
-            dataStores: [{ name: 'PlayerData', keys: ['Power', 'Coins'] }],
-            mapRequirements: { name: 'Main Stage', description: 'Training arena', elements: [] },
-            npcRequirements: [],
-            configurationValues: [{ key: 'BASE_REWARD', value: 10, description: 'Base reward per action' }]
-          }
-        };
+        contentsPayload.push({ text: planPrompt });
+
+        const geminiRes = await callGemini(ai, contentsPayload, preferredModel);
+        const rawText = geminiRes.text || '';
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        planData = JSON.parse(cleanJson);
+      } catch (err: any) {
+        console.error('Streaming plan error:', err.message);
       }
     }
 
-    send('thinking', { thought: '• Synthesis complete. Luau code structure and specifications validated.', step: '• Synthesis complete. Luau code structure and specifications validated.' });
-    await sleep(200);
+    if (!planData) {
+      planData = {
+        title: prompt.length > 25 ? prompt.substring(0, 25) : (prompt || 'Roblox Project'),
+        genre: 'Roblox Experience',
+        concept: `A custom Roblox experience based on: ${prompt}. Features server-authoritative logic, clean Luau modules, and responsive client interaction.`,
+        gameplayLoop: [
+          'Players spawn into the arena with interactive training nodes.',
+          'Engage with targets to earn currency and power.',
+          'Use earned power to unlock upgrades and prestige multipliers.',
+          'Compete on global leaderboards.'
+        ],
+        gameSystems: [
+          { name: 'Core Interaction', description: 'Server-validated input debounce', files: ['ServerScriptService/Systems/CoreSystem.server.lua'] },
+          { name: 'Progression', description: 'Exponential multiplier tracking', files: ['ServerScriptService/Systems/ProgressionSystem.server.lua'] }
+        ],
+        requiredScripts: [
+          { path: 'ServerScriptService/Systems/CoreSystem.server.lua', purpose: 'Handles player actions', scriptType: 'server' },
+          { path: 'ReplicatedStorage/Modules/Config.lua', purpose: 'Game balancing constants', scriptType: 'module' },
+          { path: 'StarterPlayer/StarterPlayerScripts/Controller.client.lua', purpose: 'Client inputs & effects', scriptType: 'client' }
+        ],
+        requiredUI: [{ name: 'HUD', description: 'Leaderstats and action triggers' }],
+        remotes: [{ name: 'PerformAction', type: 'RemoteEvent', purpose: 'Action request' }],
+        dataStores: [{ name: 'PlayerData', keys: ['Power', 'Coins'] }],
+        mapRequirements: { name: 'Main Stage', description: 'Training arena', elements: [] },
+        npcRequirements: [],
+        configurationValues: [{ key: 'BASE_REWARD', value: 10, description: 'Base reward per action' }]
+      };
+    }
 
     send('thinking_done', {});
-
-    if (resultData.plan) {
-      send('answer_chunk', { chunk: `\nArchitectural plan ready for **${resultData.plan.title}**. Review the specifications below and approve to generate the Luau code.` });
-      send('result', { type: 'plan', plan: resultData.plan, explanation: `Architectural plan ready for "${resultData.plan.title}". Review the specifications below and approve to generate the Luau code.` });
-    } else {
-      send('answer_chunk', { chunk: `\n${resultData.explanation || 'Project files successfully updated.'}` });
-      send('result', { type: 'modify', files: resultData.files, explanation: resultData.explanation, previewElements: resultData.previewElements });
-    }
-
+    send('answer_chunk', { chunk: `\nArchitectural plan ready for **${planData.title}**. Review the specifications below and approve to generate the Luau code.` });
+    send('result', { type: 'plan', plan: planData, explanation: `Architectural plan ready for "${planData.title}". Review the specifications below and approve to generate the Luau code.` });
     send('done', {});
     res.end();
   });

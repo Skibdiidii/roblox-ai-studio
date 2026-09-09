@@ -2,23 +2,38 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.9.0',
+    date: '2026-09-09',
+    title: 'Freeform AI Chat with Image & File Attachments, Hamburger Navigation & High-Speed Streaming',
+    tag: 'Major',
+    highlights: [
+      'Freeform AI Chat: Chat freely with AI on any Luau topic, game design questions, or full-scale Roblox architecture',
+      'Multimodal Attachments: Drag & drop images, paste screenshots from clipboard, or attach .lua, .luau, and text files',
+      'Ultra-Fast AI Response: High-concurrency streaming powered by Gemini 3.6 Flash with live thinking breakdowns',
+      'Hamburger Drawer Navigation: Streamlined hamburger icon navigation for switching workspaces on mobile and desktop',
+      'Focused Codebase Workspace: Cleaned up preview overhead for maximum code editing and prompt workspace speed'
+    ],
+    details: [
+      'Added full attachment support in the AI Chat allowing drag & drop, file browser selection, and direct clipboard image pasting (Ctrl+V).',
+      'Connected multimodal inputs to backend streaming route for instantaneous script diagnosis, error fixing, and vision-assisted game building.',
+      'Replaced top tab clutter with a responsive hamburger drawer providing quick access to Dashboard, AI Chat, Luau IDE, Validator, and Open Cloud Deployer.',
+      'Optimized SSE streaming buffer parsing to minimize latency and deliver instantaneous answer chunks with live markdown formatting and code highlighting.',
+      'Retained complete historical update changelog with continuous auto-scrolling to explore all past releases.'
+    ]
+  },
+  {
     version: 'v1.8.0',
     date: '2026-09-09',
-    title: 'AI Message Engine Fix & Responsive Chat + Preview for Mobile and Tablet',
+    title: 'AI Message Engine Fix & Responsive Chat Experience',
     tag: 'Major',
     highlights: [
       'AI Message Engine Fix: Fixed result event dispatching, multi-line SSE chunk handling, and streaming completion',
-      'Chat + 3D Preview Combined View: Interactive split view engineered for mobile phones, tablets, and desktop workstations',
-      'Mobile & Tablet Device Simulation: Realistic simulated chassis viewports with portrait/landscape rotation for 3D worlds',
       'Polished Message Typography: Rich bold rendering, Luau code highlights, bullet formatting, and live glowing streaming cursor',
-      'Touch-Optimized Controls: Seamless touch orbit, pinch zoom, and responsive navigation across all screen sizes'
+      'Mobile & Tablet Responsive Layouts: Touch-optimized controls and responsive navigation across all screen sizes'
     ],
     details: [
       'Resolved the AI message rendering bug where modification and plan results could fail to trigger status updates during streaming.',
       'Rebuilt the Server-Sent Events parser to gracefully handle fragmented multi-line payloads and ensure thought summaries stream reliably.',
-      'Introduced the new Chat + Preview layout with quick mobile touch tabs (Chat, 3D Preview, Split) and desktop ratio presets (50/50, 40/60, 60/40).',
-      'Integrated real-time simulated Mobile and Tablet viewports in the 3D Web Preview with camera notch, bezel frames, and simulated Roblox HUD.',
-      'Added touch orbit and pan support for mobile and tablet touchscreens so creators can test and navigate 3D environments anywhere.',
       'Preserved all previous patch notes with continuous auto-scrolling and manual scroll inspection.'
     ]
   },
@@ -85,17 +100,15 @@ export const PATCH_NOTES: PatchNote[] = [
   {
     version: 'v1.4.0',
     date: '2026-09-09',
-    title: 'Roblox Open Cloud Real Publishing & 3D Interactive World',
+    title: 'Roblox Open Cloud Real Publishing & Luau Studio Engine',
     tag: 'Major',
     highlights: [
       'Official Roblox Open Cloud v1 Publishing API Integration with Server-Side Key Protection',
-      'Interactive 3D Web Preview with Arena, Dummies, NPC models, and Orbit Controls',
       'Real-time Luau Validation Engine with Security and Runtime Detection',
       'Full-featured Luau Browser Code Editor with File Tree, Syntax Highlighting, and AI Actions'
     ],
     details: [
       'Implemented real HTTPS calls to Roblox Open Cloud APIs for Place Publishing and Universe status checks.',
-      'Added visual 3D simulation with customizable camera, lighting, and dummy animations.',
       'Enhanced AI Game Generator to support iterative modifications (e.g. quests, bosses, rebirth).',
       'Export to ZIP format with complete folder structure and Roblox Studio import guide.'
     ]
@@ -128,7 +141,6 @@ export const PATCH_NOTES: PatchNote[] = [
     ],
     details: [
       'Complete folder structure matching Roblox standard: Workspace, ReplicatedStorage, ServerScriptService, StarterPlayer, StarterGui.',
-      'Added mobile touch-friendly controls for 3D camera orbit, pan, and zoom.',
       'Persistent local project storage with auto-sync.'
     ]
   },

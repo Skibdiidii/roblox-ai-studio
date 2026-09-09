@@ -1,6 +1,6 @@
 export type ScriptType = 'server' | 'client' | 'module' | 'config' | 'doc' | 'scene';
 
-export type AppView = 'dashboard' | 'chat' | 'chat-preview' | 'editor' | 'preview' | 'validator' | 'publish';
+export type AppView = 'dashboard' | 'chat' | 'editor' | 'validator' | 'publish';
 
 export type DeviceViewport = 'desktop' | 'tablet' | 'mobile';
 
@@ -91,6 +91,15 @@ export interface RobloxConfig {
   rawApiDetails?: string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'file';
+  mimeType: string;
+  data: string;
+  size?: number;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'ai' | 'system';
@@ -101,6 +110,7 @@ export interface ChatMessage {
   isStreaming?: boolean;
   plan?: GamePlan;
   modifiedFiles?: string[];
+  attachments?: ChatAttachment[];
 }
 
 export interface Project {
