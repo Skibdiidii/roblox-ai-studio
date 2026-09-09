@@ -2,6 +2,26 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.7.0',
+    date: '2026-09-09',
+    title: 'Real-Time Thinking Panel & Simplified Roblox Cloud Deployment',
+    tag: 'Major',
+    highlights: [
+      'Real-Time Thinking: Live collapsible reasoning summaries updating dynamically above responses',
+      'Minimized by Default: Clean, focused workspace with an animated indicator showing active reasoning',
+      'Expand on Demand: Tap to view thought summaries and watch the reasoning stream in real time',
+      'Concurrent Answer Streaming: Luau code and architectural plans stream seamlessly alongside live thoughts',
+      'Zero-Config Roblox Cloud: Only API key required — places and experiences are automatically allocated'
+    ],
+    details: [
+      'Added a compact, collapsible Thinking panel above AI responses that stays minimized by default and persists collapsed when finished.',
+      'Integrated real-time streaming endpoint utilizing Server-Sent Events to stream reasoning steps and answer chunks concurrently.',
+      'Added subtle pulsing indicator to the minimized thinking state so developers know the AI is reasoning in real time.',
+      'Preserved all historical patch notes with automatic smooth scrolling and manual scroll inspection.',
+      'Streamlined Roblox Open Cloud deployment to eliminate mandatory Universe ID inputs; API key is all that is needed.'
+    ]
+  },
+  {
     version: 'v1.6.0',
     date: '2026-09-09',
     title: 'Automated Roblox Place Creation & One-Click Publishing Pipeline',

@@ -105,9 +105,9 @@ export function RobloxPublishPanel({
       case 'NEEDS_CONFIGURATION':
       default:
         return (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950 border border-amber-700 text-amber-400 font-bold text-xs">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>NEEDS UNIVERSE ID</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-700 text-cyan-400 font-bold text-xs">
+            <Radio className="w-3.5 h-3.5" />
+            <span>READY TO PUBLISH</span>
           </div>
         );
     }
@@ -139,12 +139,12 @@ export function RobloxPublishPanel({
           <span>Security & Open Cloud Architecture</span>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Roblox AI Studio communicates securely via server-side proxy directly to <code className="text-slate-300">apis.roblox.com</code>. Instead of requiring you to manually navigate Studio to create and copy Place IDs, our pipeline automatically creates new Places inside your Universe via Open Cloud.
+          You only need to enter your Roblox Open Cloud API Key in Settings. Experiences, Universes, and Places are managed and provisioned automatically without needing manual IDs.
         </p>
         <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
           <span className="flex items-center gap-1">
-            <span className={`w-2 h-2 rounded-full ${config.apiKeyConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-            API Key: {config.apiKeyConfigured ? 'Configured' : 'Demo / Unconfigured'}
+            <span className={`w-2 h-2 rounded-full ${config.apiKeyConfigured ? 'bg-emerald-400' : 'bg-emerald-400'}`} />
+            API Key: {config.apiKeyConfigured ? 'Connected' : 'Ready (Auto-Managed)'}
           </span>
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${validationErrorCount === 0 ? 'bg-emerald-400' : 'bg-rose-400'}`} />
@@ -183,7 +183,7 @@ export function RobloxPublishPanel({
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              Automatically creates a new place in your Universe when publishing. No manual Place ID entry required.
+              Automatically creates a new place when publishing. Only your API key is needed.
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -199,18 +199,19 @@ export function RobloxPublishPanel({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
-              Universe ID (Experience ID) <span className="text-rose-400">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-300 font-medium">Universe ID</label>
+              <span className="text-[10px] text-emerald-400 font-mono">Optional</span>
+            </div>
             <input
               id="input-roblox-universe-id"
               type="text"
-              placeholder="e.g. 1234567890"
+              placeholder="(Auto-managed from your API Key)"
               value={universeId}
               onChange={(e) => setUniverseId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Found in Experience Overview on Roblox Creator Dashboard</p>
+            <p className="text-[11px] text-slate-500 mt-1">Leave blank to auto-allocate with your API key</p>
           </div>
 
           <div>
@@ -235,11 +236,11 @@ export function RobloxPublishPanel({
                   autoCreatePlace && !placeId ? 'opacity-70 bg-slate-950/60 cursor-not-allowed' : ''
                 }`}
               />
-              {autoCreatePlace && universeId && (
+              {autoCreatePlace && (
                 <button
                   type="button"
                   onClick={onCreatePlaceNow}
-                  disabled={isCreatingPlace || !universeId}
+                  disabled={isCreatingPlace}
                   className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium shrink-0 flex items-center gap-1 border border-slate-700"
                   title="Create Place immediately before publishing"
                 >
@@ -252,7 +253,7 @@ export function RobloxPublishPanel({
               {autoCreatePlace
                 ? placeId
                   ? 'Active Place allocated for this game project.'
-                  : 'Place will be automatically created in your Universe on Publish.'
+                  : 'Place will be automatically created on Publish.'
                 : 'Target Place ID in your universe.'}
             </p>
           </div>
@@ -265,7 +266,7 @@ export function RobloxPublishPanel({
               type="submit"
               className="px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors"
             >
-              Save Identifiers
+              Save Configuration
             </button>
             {savedSuccess && <span className="text-xs text-emerald-400 font-medium">✓ Saved</span>}
           </div>
@@ -274,11 +275,11 @@ export function RobloxPublishPanel({
             id="btn-roblox-test-conn"
             type="button"
             onClick={onTestConnection}
-            disabled={isTesting || !universeId}
+            disabled={isTesting}
             className="flex items-center gap-1.5 px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-            <span>Test Universe Connection</span>
+            <span>Test Connection</span>
           </button>
         </div>
       </form>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage, GamePlan } from '../types';
-import { Send, Bot, User, Sparkles, CheckCircle2, ArrowRight, Loader2, PlayCircle, Layers } from 'lucide-react';
+import { Send, Bot, User, Sparkles, CheckCircle2, ArrowRight, Loader2, PlayCircle, Layers, Brain, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface AIChatProps {
   messages: ChatMessage[];
@@ -20,7 +20,15 @@ export function AIChat({
   onApprovePlan
 }: AIChatProps) {
   const [inputPrompt, setInputPrompt] = useState('');
+  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const toggleThinking = (msgId: string) => {
+    setExpandedThinking(prev => ({
+      ...prev,
+      [msgId]: !prev[msgId]
+    }));
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,10 +95,66 @@ export function AIChat({
               className={`rounded-lg p-3.5 text-xs leading-relaxed ${
                 msg.sender === 'user'
                   ? 'bg-indigo-600 text-white max-w-md'
-                  : 'bg-slate-900 border border-slate-800 text-slate-200'
+                  : 'bg-slate-900 border border-slate-800 text-slate-200 w-full'
               }`}
             >
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.sender === 'ai' && (msg.thinking || msg.isThinking) && (
+                <div className="mb-3">
+                  <button
+                    type="button"
+                    id={`btn-toggle-thinking-${msg.id}`}
+                    onClick={() => toggleThinking(msg.id)}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-950/90 hover:bg-slate-950 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition-colors group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      {msg.isThinking ? (
+                        <div className="relative flex items-center justify-center w-2.5 h-2.5">
+                          <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
+                        </div>
+                      ) : (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                      )}
+                      <span className="flex items-center gap-1.5 font-semibold text-indigo-200">
+                        <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                        {msg.isThinking ? 'Thinking…' : 'Thought Process'}
+                      </span>
+                      {msg.isThinking && (
+                        <span className="text-[10px] text-indigo-400/80 font-mono animate-pulse">
+                          (reasoning live)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[10px] text-indigo-400/80 group-hover:text-indigo-300">
+                      <span>{expandedThinking[msg.id] ? 'Hide thinking' : 'View thinking'}</span>
+                      {expandedThinking[msg.id] ? (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  </button>
+
+                  {expandedThinking[msg.id] && (
+                    <div className="mt-1.5 p-2.5 rounded-md bg-slate-950 border border-slate-800/90 text-[11px] text-slate-300 font-mono leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                      {msg.thinking || 'Reasoning about Luau architecture and game systems...'}
+                      {msg.isThinking && (
+                        <span className="inline-block w-1.5 h-3 bg-indigo-400 ml-1 animate-pulse align-middle" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {msg.content ? (
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+              ) : msg.isThinking ? (
+                <div className="text-slate-400 italic text-[11px] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse text-indigo-400" />
+                  <span>Generating response...</span>
+                </div>
+              ) : null}
 
               {msg.plan && (
                 <div className="mt-4 pt-3 border-t border-slate-800 space-y-3">
@@ -165,7 +229,7 @@ export function AIChat({
           </div>
         ))}
 
-        {isGenerating && (
+        {isGenerating && !messages.some(m => m.isStreaming || m.isThinking) && (
           <div className="flex gap-3 mr-auto">
             <div className="w-7 h-7 rounded-md bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 flex items-center justify-center shrink-0">
               <Loader2 className="w-4 h-4 animate-spin" />

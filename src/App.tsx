@@ -189,98 +189,202 @@ You can also browse starter templates in the Dashboard or configure custom API k
       content: prompt,
       timestamp: Date.now()
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    const aiMsgId = `ai-${Date.now()}`;
+    const initialAiMsg: ChatMessage = {
+      id: aiMsgId,
+      sender: 'ai',
+      content: '',
+      thinking: '',
+      isThinking: true,
+      isStreaming: true,
+      timestamp: Date.now()
+    };
+
+    setMessages(prev => [...prev, userMsg, initialAiMsg]);
     setIsGenerating(true);
 
+    const isModification = Boolean(activeProject && stage >= 4 && Object.keys(activeProject.files).length > 2);
+    if (!isModification) {
+      setStage(2);
+    }
+
     try {
-      const isModification = activeProject && stage >= 4 && Object.keys(activeProject.files).length > 2;
+      const response = await fetch('/api/ai/chat-stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
+        },
+        body: JSON.stringify({
+          prompt,
+          mode: isModification ? 'modify' : 'plan',
+          project: isModification ? activeProject : undefined,
+          preferredModel: apiSettings.preferredModel
+        })
+      });
 
-      if (isModification && activeProject) {
-        const response = await fetch('/api/ai/modify-game', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
-          },
-          body: JSON.stringify({
-            prompt,
-            project: activeProject,
-            preferredModel: apiSettings.preferredModel
-          })
-        });
+      if (!response.ok) {
+        throw new Error(`AI Service returned ${response.status}`);
+      }
 
-        if (!response.ok) {
-          throw new Error(`AI Service returned ${response.status}`);
-        }
+      if (!response.body) {
+        throw new Error('Streaming not supported');
+      }
 
-        const data = await response.json();
-        const modifiedFilePaths = data.files ? Object.keys(data.files) : [];
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
 
-        if (data.files && Object.keys(data.files).length > 0) {
-          updateActiveProject(prev => ({
-            ...prev,
-            lastModified: Date.now(),
-            files: {
-              ...prev.files,
-              ...data.files
-            },
-            previewElements: data.previewElements || prev.previewElements
-          }));
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-          if (modifiedFilePaths.length > 0) {
-            setActiveFilePath(modifiedFilePaths[0]);
-            setOpenTabs(prev => Array.from(new Set([...prev, ...modifiedFilePaths])));
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          const trimmed = block.trim();
+          if (!trimmed) continue;
+
+          let eventName = 'message';
+          let payloadStr = '';
+
+          const lines = trimmed.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              eventName = line.substring(7).trim();
+            } else if (line.startsWith('data: ')) {
+              payloadStr = line.substring(6).trim();
+            }
+          }
+
+          if (!payloadStr) continue;
+
+          try {
+            const data = JSON.parse(payloadStr);
+
+            if (eventName === 'thinking') {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === aiMsgId
+                    ? {
+                        ...m,
+                        thinking: m.thinking ? `${m.thinking}\n${data.step}` : data.step,
+                        isThinking: true
+                      }
+                    : m
+                )
+              );
+            } else if (eventName === 'thinking_done') {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === aiMsgId
+                    ? { ...m, isThinking: false }
+                    : m
+                )
+              );
+            } else if (eventName === 'answer_chunk') {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === aiMsgId
+                    ? {
+                        ...m,
+                        content: (m.content || '') + data.chunk,
+                        isThinking: false
+                      }
+                    : m
+                )
+              );
+            } else if (eventName === 'result') {
+              if (data.type === 'plan' && data.plan) {
+                setCurrentPlan(data.plan);
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === aiMsgId
+                      ? {
+                          ...m,
+                          content: data.explanation || m.content || `I've created an architectural plan for "${data.plan.title}". Review the gameplay loop, systems, and remotes below. When you're ready, click "Approve & Generate Files".`,
+                          plan: data.plan,
+                          isThinking: false,
+                          isStreaming: false
+                        }
+                      : m
+                  )
+                );
+              } else if (data.type === 'modify') {
+                const modifiedFilePaths = data.files ? Object.keys(data.files) : [];
+                if (data.files && Object.keys(data.files).length > 0) {
+                  updateActiveProject(prev => ({
+                    ...prev,
+                    lastModified: Date.now(),
+                    files: {
+                      ...prev.files,
+                      ...data.files
+                    },
+                    previewElements: data.previewElements || prev.previewElements
+                  }));
+
+                  if (modifiedFilePaths.length > 0) {
+                    setActiveFilePath(modifiedFilePaths[0]);
+                    setOpenTabs(prevTabs => Array.from(new Set([...prevTabs, ...modifiedFilePaths])));
+                  }
+                }
+
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === aiMsgId
+                      ? {
+                          ...m,
+                          content: data.explanation || m.content || 'I have updated the game project according to your request.',
+                          modifiedFiles: modifiedFilePaths,
+                          isThinking: false,
+                          isStreaming: false
+                        }
+                      : m
+                  )
+                );
+              }
+            } else if (eventName === 'error') {
+              throw new Error(data.message || 'Error occurred during streaming');
+            } else if (eventName === 'done') {
+              setMessages(prev =>
+                prev.map(m =>
+                  m.id === aiMsgId
+                    ? { ...m, isThinking: false, isStreaming: false }
+                    : m
+                )
+              );
+            }
+          } catch (e) {
           }
         }
-
-        const aiMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          content: data.explanation || 'I have updated the game project according to your request.',
-          timestamp: Date.now(),
-          modifiedFiles: modifiedFilePaths
-        };
-        setMessages(prev => [...prev, aiMsg]);
-      } else {
-        setStage(2);
-        const response = await fetch('/api/ai/generate-plan', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
-          },
-          body: JSON.stringify({
-            prompt,
-            preferredModel: apiSettings.preferredModel
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`AI Service returned ${response.status}`);
-        }
-
-        const plan: GamePlan = await response.json();
-        setCurrentPlan(plan);
-
-        const aiMsg: ChatMessage = {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          content: `I've created an architectural plan for "${plan.title}". Review the gameplay loop, systems, and remotes below. When you're ready, click "Approve & Generate Files".`,
-          timestamp: Date.now(),
-          plan
-        };
-        setMessages(prev => [...prev, aiMsg]);
       }
     } catch (err: any) {
-      const errorMsg: ChatMessage = {
-        id: `ai-err-${Date.now()}`,
-        sender: 'ai',
-        content: `Could not reach AI generation engine: ${err.message}. Please verify your Gemini API key in API Settings or try again.`,
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === aiMsgId
+            ? {
+                ...m,
+                content: m.content
+                  ? `${m.content}\n\n[Error occurred: ${err.message}]`
+                  : `Could not reach AI generation engine: ${err.message}. Please verify your Gemini API key in API Settings or try again.`,
+                isThinking: false,
+                isStreaming: false
+              }
+            : m
+        )
+      );
     } finally {
       setIsGenerating(false);
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === aiMsgId
+            ? { ...m, isThinking: false, isStreaming: false }
+            : m
+        )
+      );
     }
   };
 

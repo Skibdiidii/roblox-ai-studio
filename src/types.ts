@@ -90,6 +90,9 @@ export interface ChatMessage {
   sender: 'user' | 'ai' | 'system';
   content: string;
   timestamp: number;
+  thinking?: string;
+  isThinking?: boolean;
+  isStreaming?: boolean;
   plan?: GamePlan;
   modifiedFiles?: string[];
 }
