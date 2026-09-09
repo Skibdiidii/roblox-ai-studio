@@ -1,7 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { PreviewElement } from '../types';
-import { RotateCcw, Play, Pause, Sun, Moon, Maximize2, Sparkles, Layers } from 'lucide-react';
+import { PreviewElement, DeviceViewport, DeviceOrientation } from '../types';
+import {
+  RotateCcw,
+  Play,
+  Pause,
+  Sun,
+  Moon,
+  Sparkles,
+  Layers,
+  Monitor,
+  Tablet,
+  Smartphone,
+  RotateCw,
+  MessageSquare,
+  Users
+} from 'lucide-react';
 
 interface Web3DPreviewProps {
   elements: PreviewElement[];
@@ -15,6 +29,8 @@ export function Web3DPreview({ elements, onSelectElement }: Web3DPreviewProps) {
   const [showWireframe, setShowWireframe] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PreviewElement | null>(null);
   const [dummyCount, setDummyCount] = useState(0);
+  const [viewport, setViewport] = useState<DeviceViewport>('desktop');
+  const [orientation, setOrientation] = useState<DeviceOrientation>('landscape');
 
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -424,19 +440,82 @@ export function Web3DPreview({ elements, onSelectElement }: Web3DPreviewProps) {
     camera.lookAt(state.target);
   };
 
+  const getDeviceDimensions = () => {
+    if (viewport === 'desktop') {
+      return 'w-full h-full';
+    }
+    if (viewport === 'tablet') {
+      return orientation === 'landscape'
+        ? 'w-[820px] max-w-[96%] h-[560px] max-h-[94%]'
+        : 'w-[560px] max-w-[96%] h-[780px] max-h-[94%]';
+    }
+    return orientation === 'landscape'
+      ? 'w-[680px] max-w-[96%] h-[340px] max-h-[94%]'
+      : 'w-[360px] max-w-[96%] h-[680px] max-h-[94%]';
+  };
+
   return (
     <div className="relative w-full h-full min-h-[420px] bg-slate-950 flex flex-col overflow-hidden select-none">
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
-        <div className="bg-slate-900/90 border border-slate-700/80 px-3 py-1.5 rounded-md backdrop-blur-md shadow-lg flex items-center gap-2">
+      <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-2">
+        <div className="bg-slate-900/90 border border-slate-700/80 px-2.5 py-1.5 rounded-md backdrop-blur-md shadow-lg flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
-          <span className="text-xs font-mono font-bold tracking-wider text-emerald-300">WEB PREVIEW</span>
+          <span className="text-xs font-mono font-bold tracking-wider text-emerald-300">3D PREVIEW</span>
         </div>
-        <div className="hidden sm:flex bg-slate-900/80 border border-slate-800 px-2.5 py-1.5 rounded-md text-[11px] text-slate-400">
-          Visual browser simulation (WebGL)
+
+        <div className="flex items-center bg-slate-900/90 border border-slate-800 p-0.5 rounded-md backdrop-blur-md">
+          <button
+            id="btn-viewport-desktop"
+            type="button"
+            onClick={() => setViewport('desktop')}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-colors ${
+              viewport === 'desktop' ? 'bg-indigo-600 text-white font-medium shadow' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Desktop Mode (Full)"
+          >
+            <Monitor className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Desktop</span>
+          </button>
+          <button
+            id="btn-viewport-tablet"
+            type="button"
+            onClick={() => setViewport('tablet')}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-colors ${
+              viewport === 'tablet' ? 'bg-indigo-600 text-white font-medium shadow' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Tablet Device Viewport"
+          >
+            <Tablet className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Tablet</span>
+          </button>
+          <button
+            id="btn-viewport-mobile"
+            type="button"
+            onClick={() => setViewport('mobile')}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-colors ${
+              viewport === 'mobile' ? 'bg-indigo-600 text-white font-medium shadow' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Mobile Phone Viewport"
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Mobile</span>
+          </button>
+
+          {viewport !== 'desktop' && (
+            <button
+              id="btn-viewport-orientation"
+              type="button"
+              onClick={() => setOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')}
+              className="flex items-center gap-1 px-2 py-1 ml-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-cyan-300 transition-colors border border-slate-700"
+              title={`Orientation: ${orientation} (click to rotate)`}
+            >
+              <RotateCw className="w-3 h-3" />
+              <span className="capitalize">{orientation}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-lg backdrop-blur-md shadow-lg">
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 p-1.5 rounded-lg backdrop-blur-md shadow-lg">
         <button
           id="btn-preview-toggle-anim"
           onClick={() => setIsPlayingAnimation(!isPlayingAnimation)}
@@ -477,7 +556,54 @@ export function Web3DPreview({ elements, onSelectElement }: Web3DPreviewProps) {
         </button>
       </div>
 
-      <div ref={mountRef} className="w-full h-full flex-1 cursor-grab active:cursor-grabbing" />
+      <div className="w-full h-full flex-1 flex items-center justify-center p-2 sm:p-4 overflow-hidden relative">
+        {viewport === 'desktop' ? (
+          <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+        ) : (
+          <div className="relative flex items-center justify-center w-full h-full">
+            <div className={`relative ${getDeviceDimensions()} bg-slate-900 border-4 border-slate-700/90 rounded-[28px] shadow-2xl shadow-black/80 flex flex-col overflow-hidden ring-1 ring-white/10`}>
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-slate-950/80 px-3 py-0.5 rounded-full border border-slate-800">
+                <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+                <div className="w-8 h-1 rounded-full bg-slate-800"></div>
+              </div>
+
+              <div className="absolute top-0 left-0 right-0 h-9 bg-slate-950/80 backdrop-blur-md z-20 flex items-center justify-between px-3 border-b border-slate-800/60 pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto">
+                  <div className="w-5 h-5 rounded bg-slate-800 border border-slate-700 flex items-center justify-center shadow-inner">
+                    <div className="w-2.5 h-2.5 bg-white rotate-12 rounded-[1px]"></div>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-300 font-medium">
+                    <MessageSquare className="w-3 h-3 text-slate-400" />
+                    <Users className="w-3 h-3 text-slate-400 ml-1" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-800 pointer-events-auto">
+                  <span>Coins: 1,200</span>
+                  <span className="text-slate-600">|</span>
+                  <span className="text-indigo-400">Power: 450</span>
+                </div>
+              </div>
+
+              <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing flex-1" />
+
+              <div className="absolute bottom-4 left-4 z-20 pointer-events-none opacity-60">
+                <div className="w-14 h-14 rounded-full border-2 border-white/20 bg-white/5 flex items-center justify-center backdrop-blur-xs">
+                  <div className="w-5 h-5 rounded-full bg-white/30"></div>
+                </div>
+              </div>
+
+              <div className="absolute bottom-4 right-4 z-20 pointer-events-none opacity-70">
+                <div className="w-12 h-12 rounded-full border-2 border-white/30 bg-white/10 flex items-center justify-center backdrop-blur-xs text-white font-bold text-xs">
+                  ▲
+                </div>
+              </div>
+
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-24 h-1 rounded-full bg-slate-600/70 z-30 pointer-events-none"></div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         <div className="bg-slate-900/85 border border-slate-800/80 px-3 py-1.5 rounded-md backdrop-blur-sm pointer-events-auto text-xs text-slate-300 flex items-center gap-3">
@@ -485,7 +611,9 @@ export function Web3DPreview({ elements, onSelectElement }: Web3DPreviewProps) {
           <span className="text-slate-600">|</span>
           <span>Dummies: <strong className="text-amber-400">{dummyCount}</strong></span>
           <span className="text-slate-600">|</span>
-          <span className="hidden md:inline text-slate-400">Left Drag: Orbit · Right Drag/Shift: Pan · Scroll: Zoom</span>
+          <span className="hidden md:inline text-slate-400">
+            {viewport === 'desktop' ? 'Orbit: Drag · Pan: Shift/Right Drag · Zoom: Scroll' : 'Touch / Drag to orbit 3D view'}
+          </span>
         </div>
 
         {selectedItem && (

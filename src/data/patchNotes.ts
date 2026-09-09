@@ -2,6 +2,27 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.8.0',
+    date: '2026-09-09',
+    title: 'AI Message Engine Fix & Responsive Chat + Preview for Mobile and Tablet',
+    tag: 'Major',
+    highlights: [
+      'AI Message Engine Fix: Fixed result event dispatching, multi-line SSE chunk handling, and streaming completion',
+      'Chat + 3D Preview Combined View: Interactive split view engineered for mobile phones, tablets, and desktop workstations',
+      'Mobile & Tablet Device Simulation: Realistic simulated chassis viewports with portrait/landscape rotation for 3D worlds',
+      'Polished Message Typography: Rich bold rendering, Luau code highlights, bullet formatting, and live glowing streaming cursor',
+      'Touch-Optimized Controls: Seamless touch orbit, pinch zoom, and responsive navigation across all screen sizes'
+    ],
+    details: [
+      'Resolved the AI message rendering bug where modification and plan results could fail to trigger status updates during streaming.',
+      'Rebuilt the Server-Sent Events parser to gracefully handle fragmented multi-line payloads and ensure thought summaries stream reliably.',
+      'Introduced the new Chat + Preview layout with quick mobile touch tabs (Chat, 3D Preview, Split) and desktop ratio presets (50/50, 40/60, 60/40).',
+      'Integrated real-time simulated Mobile and Tablet viewports in the 3D Web Preview with camera notch, bezel frames, and simulated Roblox HUD.',
+      'Added touch orbit and pan support for mobile and tablet touchscreens so creators can test and navigate 3D environments anywhere.',
+      'Preserved all previous patch notes with continuous auto-scrolling and manual scroll inspection.'
+    ]
+  },
+  {
     version: 'v1.7.0',
     date: '2026-09-09',
     title: 'Real-Time Thinking Panel & Simplified Roblox Cloud Deployment',

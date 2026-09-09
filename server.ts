@@ -104,24 +104,24 @@ async function startServer() {
 
     const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-    const isModification = stage >= 4 && project && project.files && Object.keys(project.files).length > 0;
+    const isModification = req.body.mode === 'modify' || (stage && stage >= 4 && project && project.files && Object.keys(project.files).length > 0) || Boolean(project && project.files && Object.keys(project.files).length > 2);
 
-    send('thinking', { thought: `• Analyzing prompt: "${prompt}"` });
+    send('thinking', { thought: `• Analyzing prompt: "${prompt}"`, step: `• Analyzing prompt: "${prompt}"` });
     await sleep(250);
 
-    send('thinking', { thought: isModification ? '• Inspecting active Luau modules and architecture tree...' : '• Designing server-authoritative Luau architecture...' });
+    send('thinking', { thought: isModification ? '• Inspecting active Luau modules and architecture tree...' : '• Designing server-authoritative Luau architecture...', step: isModification ? '• Inspecting active Luau modules and architecture tree...' : '• Designing server-authoritative Luau architecture...' });
     await sleep(280);
 
     send('answer_chunk', { chunk: isModification ? `Processing modifications for: "${prompt}"...\n\n` : `Architecting Roblox project for: "${prompt}"...\n\n` });
     await sleep(200);
 
-    send('thinking', { thought: '• Formulating RemoteEvents and debounce protection contracts...' });
+    send('thinking', { thought: '• Formulating RemoteEvents and debounce protection contracts...', step: '• Formulating RemoteEvents and debounce protection contracts...' });
     await sleep(300);
 
     send('answer_chunk', { chunk: '• Defining client-server network boundaries and data safety...\n' });
     await sleep(220);
 
-    send('thinking', { thought: '• Validating DataStore leaderstats and spatial 3D elements...' });
+    send('thinking', { thought: '• Validating DataStore leaderstats and spatial 3D elements...', step: '• Validating DataStore leaderstats and spatial 3D elements...' });
     await sleep(300);
 
     const customKey = resolveGeminiKey(req);
@@ -268,17 +268,17 @@ Pure JSON only.`,
       }
     }
 
-    send('thinking', { thought: '• Synthesis complete. Luau code structure and specifications validated.' });
+    send('thinking', { thought: '• Synthesis complete. Luau code structure and specifications validated.', step: '• Synthesis complete. Luau code structure and specifications validated.' });
     await sleep(200);
 
     send('thinking_done', {});
 
     if (resultData.plan) {
       send('answer_chunk', { chunk: `\nArchitectural plan ready for **${resultData.plan.title}**. Review the specifications below and approve to generate the Luau code.` });
-      send('result', { plan: resultData.plan });
+      send('result', { type: 'plan', plan: resultData.plan, explanation: `Architectural plan ready for "${resultData.plan.title}". Review the specifications below and approve to generate the Luau code.` });
     } else {
       send('answer_chunk', { chunk: `\n${resultData.explanation || 'Project files successfully updated.'}` });
-      send('result', { files: resultData.files, explanation: resultData.explanation, previewElements: resultData.previewElements });
+      send('result', { type: 'modify', files: resultData.files, explanation: resultData.explanation, previewElements: resultData.previewElements });
     }
 
     send('done', {});

@@ -106,28 +106,32 @@ export function AIChat({
                     onClick={() => toggleThinking(msg.id)}
                     className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-950/90 hover:bg-slate-950 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition-colors group cursor-pointer"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       {msg.isThinking ? (
-                        <div className="relative flex items-center justify-center w-2.5 h-2.5">
+                        <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
                           <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-indigo-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500"></span>
                         </div>
                       ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                       )}
-                      <span className="flex items-center gap-1.5 font-semibold text-indigo-200">
+                      <span className="flex items-center gap-1.5 font-semibold text-indigo-200 shrink-0">
                         <Brain className="w-3.5 h-3.5 text-indigo-400" />
                         {msg.isThinking ? 'Thinking…' : 'Thought Process'}
                       </span>
-                      {msg.isThinking && (
-                        <span className="text-[10px] text-indigo-400/80 font-mono animate-pulse">
+                      {msg.isThinking ? (
+                        <span className="text-[10px] text-indigo-400/80 font-mono animate-pulse truncate">
                           (reasoning live)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          (completed)
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1 text-[10px] text-indigo-400/80 group-hover:text-indigo-300">
-                      <span>{expandedThinking[msg.id] ? 'Hide thinking' : 'View thinking'}</span>
+                    <div className="flex items-center gap-1 text-[10px] text-indigo-400/80 group-hover:text-indigo-300 shrink-0 ml-2">
+                      <span>{expandedThinking[msg.id] ? 'Hide' : 'View'}</span>
                       {expandedThinking[msg.id] ? (
                         <ChevronDown className="w-3.5 h-3.5" />
                       ) : (
@@ -148,11 +152,59 @@ export function AIChat({
               )}
 
               {msg.content ? (
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="space-y-2 leading-relaxed">
+                  {msg.content.split('\n\n').map((paragraph, pIdx) => {
+                    const lines = paragraph.split('\n');
+                    return (
+                      <div key={pIdx} className="space-y-1">
+                        {lines.map((line, lIdx) => {
+                          const isBullet = line.trim().startsWith('•') || line.trim().startsWith('-');
+                          const cleanLine = isBullet ? line.trim().replace(/^[•\-]\s*/, '') : line;
+                          const parts = cleanLine.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+
+                          const formattedLine = parts.map((part, partIdx) => {
+                            if (part.startsWith('**') && part.endsWith('**')) {
+                              return (
+                                <strong key={partIdx} className="text-white font-semibold">
+                                  {part.slice(2, -2)}
+                                </strong>
+                              );
+                            }
+                            if (part.startsWith('`') && part.endsWith('`')) {
+                              return (
+                                <code
+                                  key={partIdx}
+                                  className="px-1 py-0.5 rounded bg-slate-950 border border-slate-800 text-indigo-300 font-mono text-[10.5px]"
+                                >
+                                  {part.slice(1, -1)}
+                                </code>
+                              );
+                            }
+                            return <span key={partIdx}>{part}</span>;
+                          });
+
+                          if (isBullet) {
+                            return (
+                              <div key={lIdx} className="flex items-start gap-2 pl-1">
+                                <span className="text-indigo-400 select-none">•</span>
+                                <span className="flex-1">{formattedLine}</span>
+                              </div>
+                            );
+                          }
+
+                          return <div key={lIdx}>{formattedLine}</div>;
+                        })}
+                      </div>
+                    );
+                  })}
+                  {msg.isStreaming && (
+                    <span className="inline-block w-2 h-3.5 bg-indigo-400 ml-1 animate-pulse align-middle" />
+                  )}
+                </div>
               ) : msg.isThinking ? (
-                <div className="text-slate-400 italic text-[11px] flex items-center gap-1.5">
+                <div className="text-slate-400 italic text-[11px] flex items-center gap-1.5 py-1">
                   <Sparkles className="w-3.5 h-3.5 animate-pulse text-indigo-400" />
-                  <span>Generating response...</span>
+                  <span>Synthesizing Luau game architecture...</span>
                 </div>
               ) : null}
 

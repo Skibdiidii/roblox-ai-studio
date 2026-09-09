@@ -1,5 +1,5 @@
 import React from 'react';
-import { Project, ValidationResult } from '../types';
+import { Project, ValidationResult, AppView } from '../types';
 import {
   Sparkles,
   FileCode,
@@ -11,12 +11,13 @@ import {
   FolderKanban,
   Bell,
   Code2,
-  Key
+  Key,
+  Columns
 } from 'lucide-react';
 
 interface HeaderProps {
-  currentView: 'dashboard' | 'chat' | 'editor' | 'preview' | 'validator' | 'publish';
-  onSelectView: (view: 'dashboard' | 'chat' | 'editor' | 'preview' | 'validator' | 'publish') => void;
+  currentView: AppView;
+  onSelectView: (view: AppView) => void;
   stage: number;
   project: Project;
   validationIssues: ValidationResult[];
@@ -162,6 +163,23 @@ export function Header({
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
           <span>AI Generator</span>
+        </button>
+
+        <button
+          id="nav-tab-chat-preview"
+          onClick={() => onSelectView('chat-preview')}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
+            currentView === 'chat-preview'
+              ? 'bg-indigo-600 text-white font-medium shadow'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+          }`}
+          title="Responsive Chat + 3D Preview combined view"
+        >
+          <Columns className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Chat + Preview</span>
+          <span className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            Dual
+          </span>
         </button>
 
         <button

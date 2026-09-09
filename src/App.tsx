@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Project, ProjectFile, ChatMessage, GamePlan, ValidationResult, PreviewElement, ApiSettings } from './types';
+import { Project, ProjectFile, ChatMessage, GamePlan, ValidationResult, PreviewElement, ApiSettings, AppView } from './types';
 import { GAME_TEMPLATES, GameTemplate } from './data/templates';
 import { validateRobloxProject } from './utils/validator';
 import { exportProjectZip, downloadBlob, downloadSingleFile } from './utils/exporter';
@@ -8,6 +8,7 @@ import { FileExplorer } from './components/FileExplorer';
 import { CodeEditor } from './components/CodeEditor';
 import { AIChat } from './components/AIChat';
 import { Web3DPreview } from './components/Web3DPreview';
+import { ChatAndPreview } from './components/ChatAndPreview';
 import { ValidationPanel } from './components/ValidationPanel';
 import { RobloxPublishPanel } from './components/RobloxPublishPanel';
 import { ProjectDashboard } from './components/ProjectDashboard';
@@ -57,7 +58,7 @@ export default function App() {
   });
 
   const [isApiSettingsOpen, setIsApiSettingsOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'chat' | 'editor' | 'preview' | 'validator' | 'publish'>('chat');
+  const [currentView, setCurrentView] = useState<AppView>('chat-preview');
   const [activeFilePath, setActiveFilePath] = useState<string>('');
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [stage, setStage] = useState<number>(1);
@@ -249,16 +250,18 @@ You can also browse starter templates in the Dashboard or configure custom API k
           if (!trimmed) continue;
 
           let eventName = 'message';
-          let payloadStr = '';
+          const dataLines: string[] = [];
 
           const lines = trimmed.split('\n');
           for (const line of lines) {
-            if (line.startsWith('event: ')) {
-              eventName = line.substring(7).trim();
-            } else if (line.startsWith('data: ')) {
-              payloadStr = line.substring(6).trim();
+            if (line.startsWith('event:')) {
+              eventName = line.replace(/^event:\s*/, '').trim();
+            } else if (line.startsWith('data:')) {
+              dataLines.push(line.replace(/^data:\s*/, ''));
             }
           }
+
+          const payloadStr = dataLines.join('\n').trim();
 
           if (!payloadStr) continue;
 
@@ -266,17 +269,20 @@ You can also browse starter templates in the Dashboard or configure custom API k
             const data = JSON.parse(payloadStr);
 
             if (eventName === 'thinking') {
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === aiMsgId
-                    ? {
-                        ...m,
-                        thinking: m.thinking ? `${m.thinking}\n${data.step}` : data.step,
-                        isThinking: true
-                      }
-                    : m
-                )
-              );
+              const thoughtText = data.thought || data.step || '';
+              if (thoughtText) {
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === aiMsgId
+                      ? {
+                          ...m,
+                          thinking: m.thinking ? `${m.thinking}\n${thoughtText}` : thoughtText,
+                          isThinking: true
+                        }
+                      : m
+                  )
+                );
+              }
             } else if (eventName === 'thinking_done') {
               setMessages(prev =>
                 prev.map(m =>
@@ -291,29 +297,33 @@ You can also browse starter templates in the Dashboard or configure custom API k
                   m.id === aiMsgId
                     ? {
                         ...m,
-                        content: (m.content || '') + data.chunk,
+                        content: (m.content || '') + (data.chunk || ''),
                         isThinking: false
                       }
                     : m
                 )
               );
             } else if (eventName === 'result') {
-              if (data.type === 'plan' && data.plan) {
-                setCurrentPlan(data.plan);
-                setMessages(prev =>
-                  prev.map(m =>
-                    m.id === aiMsgId
-                      ? {
-                          ...m,
-                          content: data.explanation || m.content || `I've created an architectural plan for "${data.plan.title}". Review the gameplay loop, systems, and remotes below. When you're ready, click "Approve & Generate Files".`,
-                          plan: data.plan,
-                          isThinking: false,
-                          isStreaming: false
-                        }
-                      : m
-                  )
-                );
-              } else if (data.type === 'modify') {
+              if (data.plan || data.type === 'plan') {
+                const plan = data.plan;
+                if (plan) {
+                  setCurrentPlan(plan);
+                  setMessages(prev =>
+                    prev.map(m =>
+                      m.id === aiMsgId
+                        ? {
+                            ...m,
+                            content: data.explanation || m.content || `I've created an architectural plan for "${plan.title}". Review the gameplay loop, systems, and remotes below. When you're ready, click "Approve & Generate Files".`,
+                            plan: plan,
+                            isThinking: false,
+                            isStreaming: false
+                          }
+                        : m
+                    )
+                  );
+                }
+              }
+              if (data.files || data.type === 'modify') {
                 const modifiedFilePaths = data.files ? Object.keys(data.files) : [];
                 if (data.files && Object.keys(data.files).length > 0) {
                   updateActiveProject(prev => ({
@@ -338,7 +348,7 @@ You can also browse starter templates in the Dashboard or configure custom API k
                       ? {
                           ...m,
                           content: data.explanation || m.content || 'I have updated the game project according to your request.',
-                          modifiedFiles: modifiedFilePaths,
+                          modifiedFiles: modifiedFilePaths.length > 0 ? modifiedFilePaths : m.modifiedFiles,
                           isThinking: false,
                           isStreaming: false
                         }
@@ -875,6 +885,21 @@ You can also browse starter templates in the Dashboard or configure custom API k
               isGenerating={isGenerating}
               onSendMessage={handleSendMessage}
               onApprovePlan={handleApprovePlan}
+            />
+          </div>
+        )}
+
+        {currentView === 'chat-preview' && (
+          <div className="flex-1 flex overflow-hidden">
+            <ChatAndPreview
+              messages={messages}
+              currentPlan={currentPlan}
+              stage={stage}
+              isGenerating={isGenerating}
+              onSendMessage={handleSendMessage}
+              onApprovePlan={handleApprovePlan}
+              previewElements={activeProject?.previewElements || []}
+              projectName={activeProject?.name || 'Roblox Game'}
             />
           </div>
         )}

@@ -1,5 +1,11 @@
 export type ScriptType = 'server' | 'client' | 'module' | 'config' | 'doc' | 'scene';
 
+export type AppView = 'dashboard' | 'chat' | 'chat-preview' | 'editor' | 'preview' | 'validator' | 'publish';
+
+export type DeviceViewport = 'desktop' | 'tablet' | 'mobile';
+
+export type DeviceOrientation = 'portrait' | 'landscape';
+
 export interface ProjectFile {
   path: string;
   name: string;
