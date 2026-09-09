@@ -2,6 +2,24 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v1.9.1',
+    date: '2026-09-09',
+    title: 'High-Demand Resiliency, Automatic Model Failover & AI Reliability Engine',
+    tag: 'Hotfix',
+    highlights: [
+      'High-Demand Resiliency: Added exponential backoff and retry handling for high-traffic 503/429 spikes',
+      'Automatic Model Failover: Cascade fallback between gemini-3.8-flash, gemini-3.1-flash-lite, and gemini-3.1-pro-preview',
+      'Verified Model Standards: Updated default reasoning model to gemini-3.8-flash with official telemetry headers',
+      'Continuous Architecture: Zero-downtime streaming generation for Luau scripts and architecture planning'
+    ],
+    details: [
+      'Enhanced AI engine with intelligent retry and automatic failover to prevent interruptions during Gemini API high demand spikes.',
+      'Configured multi-tier model cascade supporting gemini-3.8-flash, gemini-3.1-flash-lite, and gemini-3.1-pro-preview.',
+      'Updated API settings modal to reflect modern Gemini reasoning tiers.',
+      'Maintained complete historical update changelog with continuous auto-scrolling to explore all past releases.'
+    ]
+  },
+  {
     version: 'v1.9.0',
     date: '2026-09-09',
     title: 'Freeform AI Chat with Image & File Attachments, Hamburger Navigation & High-Speed Streaming',

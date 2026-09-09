@@ -17,7 +17,7 @@ export function ApiSettingsModal({
 }: ApiSettingsModalProps) {
   const [geminiKey, setGeminiKey] = useState(settings.geminiApiKey || '');
   const [robloxKey, setRobloxKey] = useState(settings.robloxApiKey || '');
-  const [model, setModel] = useState(settings.preferredModel || 'gemini-3.6-flash');
+  const [model, setModel] = useState(settings.preferredModel || 'gemini-3.8-flash');
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showRobloxKey, setShowRobloxKey] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -72,7 +72,7 @@ export function ApiSettingsModal({
   const handleReset = () => {
     setGeminiKey('');
     setRobloxKey('');
-    setModel('gemini-3.6-flash');
+    setModel('gemini-3.8-flash');
     setTestResult(null);
   };
 
@@ -183,9 +183,9 @@ export function ApiSettingsModal({
               onChange={(e) => setModel(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none transition-colors"
             >
-              <option value="gemini-3.6-flash">gemini-3.6-flash (Recommended, Fast & Accurate)</option>
-              <option value="gemini-3.8-flash">gemini-3.8-flash (Latest Speed Optimized)</option>
-              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Advanced Complex Logic)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended, Fast & Production Ready)</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Ultra Low Latency & High Throughput)</option>
+              <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Advanced Complex Reasoning)</option>
             </select>
             <p className="text-[11px] text-slate-400">
               The model used for all game planning, code generation, and debugging.

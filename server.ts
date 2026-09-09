@@ -12,50 +12,87 @@ const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 
+function normalizeModel(model?: string): string {
+  if (!model) return 'gemini-3.8-flash';
+  if (model === 'gemini-3.6-flash') return 'gemini-3.8-flash';
+  return model;
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 function getGeminiClient(customKey?: string): GoogleGenAI | null {
   const key = customKey || process.env.GEMINI_API_KEY;
   if (!key) return null;
-  return new GoogleGenAI({ apiKey: key });
+  return new GoogleGenAI({
+    apiKey: key,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build'
+      }
+    }
+  });
 }
 
 async function callGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
-  const candidateModels = [preferredModel, 'gemini-3.6-flash', 'gemini-3.8-flash'].filter(Boolean) as string[];
-  const modelsToTry = Array.from(new Set(candidateModels));
+  const normPref = normalizeModel(preferredModel);
+  const candidateModels = Array.from(
+    new Set([normPref, 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'].filter(Boolean))
+  );
   let lastError: any = null;
 
-  for (const model of modelsToTry) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents
-      });
-      return response;
-    } catch (err: any) {
-      lastError = err;
-      console.error(`Gemini generation attempt failed with ${model}:`, err.message);
+  for (const model of candidateModels) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents
+        });
+        return response;
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        const isTransient = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+        console.error(`Gemini generation attempt ${attempt + 1} with ${model} failed:`, msg);
+        if (isTransient && attempt === 0) {
+          await sleep(750);
+        } else {
+          break;
+        }
+      }
     }
   }
   throw lastError;
 }
 
 async function* streamGemini(ai: GoogleGenAI, contents: any, preferredModel?: string) {
-  const candidateModels = [preferredModel, 'gemini-3.6-flash', 'gemini-3.8-flash'].filter(Boolean) as string[];
-  const modelsToTry = Array.from(new Set(candidateModels));
+  const normPref = normalizeModel(preferredModel);
+  const candidateModels = Array.from(
+    new Set([normPref, 'gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-3.1-pro-preview'].filter(Boolean))
+  );
   let lastError: any = null;
 
-  for (const model of modelsToTry) {
-    try {
-      const responseStream = await ai.models.generateContentStream({
-        model,
-        contents
-      });
-      for await (const chunk of responseStream) {
-        yield chunk;
+  for (const model of candidateModels) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const responseStream = await ai.models.generateContentStream({
+          model,
+          contents
+        });
+        for await (const chunk of responseStream) {
+          yield chunk;
+        }
+        return;
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        const isTransient = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+        console.error(`Gemini stream attempt ${attempt + 1} with ${model} failed:`, msg);
+        if (isTransient && attempt === 0) {
+          await sleep(750);
+        } else {
+          break;
+        }
       }
-      return;
-    } catch (err: any) {
-      lastError = err;
-      console.error(`Gemini stream attempt failed with ${model}:`, err.message);
     }
   }
   throw lastError;
@@ -82,7 +119,7 @@ async function startServer() {
       status: 'ok',
       hasGemini: !!process.env.GEMINI_API_KEY,
       hasRobloxKey: !!process.env.ROBLOX_OPEN_CLOUD_API_KEY,
-      defaultModel: 'gemini-3.6-flash'
+      defaultModel: 'gemini-3.8-flash'
     });
   });
 
@@ -93,8 +130,15 @@ async function startServer() {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey: key });
-      const model = req.body?.preferredModel || 'gemini-3.6-flash';
+      const ai = new GoogleGenAI({
+        apiKey: key,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build'
+          }
+        }
+      });
+      const model = normalizeModel(req.body?.preferredModel);
       await callGemini(ai, 'Respond with OK', model);
       return res.json({ ok: true, message: 'Gemini API key is active and verified.' });
     } catch (err: any) {
