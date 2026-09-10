@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Project, ProjectFile, ChatMessage, GamePlan, ValidationResult, ApiSettings, AppView, ChatAttachment } from './types';
 import { GAME_TEMPLATES, GameTemplate } from './data/templates';
 import { validateRobloxProject } from './utils/validator';

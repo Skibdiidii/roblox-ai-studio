@@ -139,20 +139,16 @@ export function RobloxPublishPanel({
           <span>Security & Open Cloud Architecture</span>
         </div>
         <p className="text-xs text-slate-400 leading-relaxed">
-          You only need to enter your Roblox Open Cloud API Key in Settings. Experiences, Universes, and Places are managed and provisioned automatically without needing manual IDs.
+          Roblox Open Cloud requires an explicit Universe ID and Place ID to publish versions. Auto-creation of places is not supported by Open Cloud API.
         </p>
         <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${config.apiKeyConfigured ? 'bg-emerald-400' : 'bg-emerald-400'}`} />
-            API Key: {config.apiKeyConfigured ? 'Connected' : 'Ready (Auto-Managed)'}
+            API Key: {config.apiKeyConfigured ? 'Connected' : 'Ready'}
           </span>
           <span className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${validationErrorCount === 0 ? 'bg-emerald-400' : 'bg-rose-400'}`} />
             Validation: {validationErrorCount === 0 ? 'Passed (0 Errors)' : `${validationErrorCount} Error(s)`}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-cyan-400" />
-            Mode: {autoCreatePlace ? 'Auto-Create Place' : 'Manual Place ID'}
           </span>
         </div>
       </div>
@@ -174,88 +170,39 @@ export function RobloxPublishPanel({
           </a>
         </div>
 
-        <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-900/60 flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-indigo-200">Auto-Create New Place</span>
-              <span className="px-1.5 py-0.2 bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded text-[9px] font-mono uppercase font-bold">
-                Recommended
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              Automatically creates a new place when publishing. Only your API key is needed.
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer shrink-0">
-            <input
-              type="checkbox"
-              checked={autoCreatePlace}
-              onChange={(e) => handleToggleAutoCreate(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-          </label>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div className="grid grid-cols-1 gap-4 text-xs">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-300 font-medium">Universe ID</label>
-              <span className="text-[10px] text-emerald-400 font-mono">Optional</span>
+              <label className="text-slate-300 font-medium">Universe ID (Experience ID)</label>
+              <span className="text-[10px] text-rose-400 font-mono">Required</span>
             </div>
             <input
               id="input-roblox-universe-id"
               type="text"
-              placeholder="(Auto-managed from your API Key)"
+              placeholder="e.g. 1234567890"
               value={universeId}
               onChange={(e) => setUniverseId(e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Leave blank to auto-allocate with your API key</p>
+            <p className="text-[11px] text-slate-500 mt-1">Found in your Creator Dashboard URL for the Experience</p>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-slate-300 font-medium">Place ID</label>
-              {autoCreatePlace && (
-                <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  Auto-allocated
-                </span>
-              )}
+              <span className="text-[10px] text-rose-400 font-mono">Required</span>
             </div>
             <div className="flex items-center gap-2">
               <input
                 id="input-roblox-place-id"
                 type="text"
-                placeholder={autoCreatePlace ? '(Auto-generated on Publish)' : 'e.g. 9876543210'}
+                placeholder="e.g. 9876543210"
                 value={placeId}
-                disabled={autoCreatePlace && !placeId}
                 onChange={(e) => setPlaceId(e.target.value)}
-                className={`flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono ${
-                  autoCreatePlace && !placeId ? 'opacity-70 bg-slate-950/60 cursor-not-allowed' : ''
-                }`}
+                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
               />
-              {autoCreatePlace && (
-                <button
-                  type="button"
-                  onClick={() => onCreatePlaceNow()}
-                  disabled={isCreatingPlace}
-                  className="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs font-medium shrink-0 flex items-center gap-1 border border-slate-700"
-                  title="Create Place immediately before publishing"
-                >
-                  {isCreatingPlace ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 text-cyan-400" />}
-                  <span>Create Now</span>
-                </button>
-              )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              {autoCreatePlace
-                ? placeId
-                  ? 'Active Place allocated for this game project.'
-                  : 'Place will be automatically created on Publish.'
-                : 'Target Place ID in your universe.'}
-            </p>
+            <p className="text-[11px] text-slate-500 mt-1">Found in your Creator Dashboard under Places</p>
           </div>
         </div>
 

@@ -1475,68 +1475,12 @@ Return JSON with this exact structure:
   app.post('/api/roblox/test-connection', handleRobloxStatus);
 
   app.post('/api/roblox/create-place', async (req, res) => {
-    const { universeId, projectName, title, description } = req.body;
-    const apiKey = resolveRobloxKey(req);
-
-    if (!apiKey) {
-      return res.status(200).json({
-        success: false,
-        status: 'NEEDS_CONFIGURATION',
-        message: 'Roblox API key required. Provide your API Key in API Settings to create places on Roblox Open Cloud.'
-      });
-    }
-
-    const targetUniverseId = universeId || '1234567890';
-    const placeTitle = title || projectName || 'New Roblox Experience';
-
-    try {
-      const robloxRes = await fetch(
-        `https://apis.roblox.com/universes/v1/${targetUniverseId}/places`,
-        {
-          method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            title: placeTitle,
-            description: description || 'Generated and published by Roblox AI Studio'
-          })
-        }
-      );
-
-      const responseText = await robloxRes.text();
-      let responseData: any = safeExtractJson(responseText, { raw: responseText });
-
-      if (robloxRes.ok) {
-        const generatedPlaceId = responseData.placeId || responseData.id || String(responseData);
-        return res.json({
-          success: true,
-          status: 'READY',
-          placeId: String(generatedPlaceId),
-          message: `Successfully created new Place #${generatedPlaceId}!`,
-          details: responseData
-        });
-      } else {
-        let friendlyMsg = `Roblox Open Cloud returned HTTP ${robloxRes.status}: ${responseText || robloxRes.statusText}`;
-        if (robloxRes.status === 401 || robloxRes.status === 403) {
-          friendlyMsg = `Roblox Open Cloud Authentication Error (HTTP ${robloxRes.status}): The provided API key is invalid or lacks 'Place: Write / Create' permission. You can use 'Simulate Demo' to test the full pipeline.`;
-        }
-        return res.json({
-          success: false,
-          status: 'FAILED',
-          message: friendlyMsg,
-          details: { httpStatus: robloxRes.status, response: responseData }
-        });
-      }
-    } catch (err: any) {
-      return res.json({
-        success: false,
-        status: 'FAILED',
-        message: `Failed to connect to Roblox Open Cloud: ${err.message}`
-      });
-    }
+    return res.json({
+      success: false,
+      status: 'FAILED',
+      message: 'Roblox Open Cloud API does not support automatic Place Creation. Please create a Place manually in the Roblox Creator Dashboard and provide the Place ID.',
+      details: { step: 'create-place', error: 'Not supported by Open Cloud' }
+    });
   });
 
   const handleRobloxPublish = async (req: express.Request, res: express.Response) => {
@@ -1579,48 +1523,12 @@ Return JSON with this exact structure:
       });
     }
 
-    if (!targetPlaceId || autoCreatePlace) {
-      try {
-        const createRes = await fetch(
-          `https://apis.roblox.com/universes/v1/${targetUniverseId}/places`,
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': apiKey,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              title: targetProjectName,
-              description: 'Generated and published by Roblox AI Studio'
-            })
-          }
-        );
-
-        const createText = await createRes.text();
-        const createJson: any = safeExtractJson(createText, { raw: createText });
-
-        if (createRes.ok) {
-          targetPlaceId = String(createJson.placeId || createJson.id || createText);
-        } else {
-          let friendlyMsg = `Roblox Open Cloud place creation returned HTTP ${createRes.status}: ${createText || createRes.statusText}`;
-          if (createRes.status === 401 || createRes.status === 403) {
-            friendlyMsg = `Roblox Open Cloud Authentication Error (HTTP ${createRes.status}): The provided API key is invalid or expired. To test the pipeline with an example key, click "Simulate Demo (Example Key)" below.`;
-          }
-          return res.json({
-            status: 'FAILED',
-            success: false,
-            message: friendlyMsg,
-            details: { step: 'create-place', httpStatus: createRes.status, response: createJson }
-          });
-        }
-      } catch (err: any) {
-        return res.json({
-          status: 'FAILED',
-          success: false,
-          message: `Network error auto-creating place on Roblox Open Cloud: ${err.message}`
-        });
-      }
+    if (!targetPlaceId || !targetUniverseId) {
+      return res.json({
+        status: 'FAILED',
+        success: false,
+        message: 'Both Universe ID and Place ID are required to publish. Please configure them in the Roblox Publish Panel.'
+      });
     }
 
     try {

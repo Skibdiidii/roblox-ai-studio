@@ -2,6 +2,22 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.1',
+    date: '2026-09-09',
+    title: 'Roblox Open Cloud Publishing Architecture Fix',
+    tag: 'Hotfix',
+    highlights: [
+      'Resolved Place Creation 404 Error: Fixed a critical issue where the application attempted to auto-create Places via the Open Cloud API, which is unsupported by Roblox.',
+      'Enforced Target Experience IDs: The Publish UI has been updated to explicitly require your target Universe ID and Place ID from the Creator Dashboard, ensuring a flawless publishing pipeline.',
+      'Graceful Degradation: The backend server now properly catches creation requests and provides a friendly explanation instead of throwing network errors.'
+    ],
+    details: [
+      'Removed the Auto-Create Place toggle from the UI as Open Cloud lacks a native Place Creation endpoint.',
+      'Modified the `handleRobloxPublish` route to check for exact Place and Universe IDs before submitting the version upload payload.',
+      'Replaced the broken `create-place` API with an educational response that guides the user to use the Roblox Creator Dashboard to provision their assets.'
+    ]
+  },
+  {
     version: 'v2.3.0',
     date: '2026-09-09',
     title: 'AI Conversational Memory & Persistent Chat History',
