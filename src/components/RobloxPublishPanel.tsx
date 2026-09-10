@@ -23,7 +23,7 @@ interface RobloxPublishPanelProps {
   project: Project;
   onUpdateConfig: (updated: Partial<RobloxConfig>) => void;
   onTestConnection: () => Promise<void>;
-  onPublish: () => Promise<void>;
+  onPublish: (universeId: string, placeId: string) => Promise<void>;
   onSimulatePublish: () => Promise<void>;
   onCreatePlaceNow: () => Promise<void>;
   onExport: () => void;
@@ -181,7 +181,7 @@ export function RobloxPublishPanel({
               type="text"
               placeholder="e.g. 1234567890"
               value={universeId}
-              onChange={(e) => setUniverseId(e.target.value)}
+              onChange={(e) => { setUniverseId(e.target.value); onUpdateConfig({ universeId: e.target.value, placeId }); }}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
             />
             <p className="text-[11px] text-slate-500 mt-1">Found in your Creator Dashboard URL for the Experience</p>
@@ -198,7 +198,7 @@ export function RobloxPublishPanel({
                 type="text"
                 placeholder="e.g. 9876543210"
                 value={placeId}
-                onChange={(e) => setPlaceId(e.target.value)}
+                onChange={(e) => { setPlaceId(e.target.value); onUpdateConfig({ universeId, placeId: e.target.value }); }}
                 className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-md text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 font-mono"
               />
             </div>
@@ -261,7 +261,7 @@ export function RobloxPublishPanel({
           <button
             id="btn-roblox-publish-now"
             type="button"
-            onClick={() => onPublish()}
+            onClick={() => onPublish(universeId, placeId)}
             disabled={isPublishing || validationErrorCount > 0}
             className="flex-1 min-w-[200px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-md bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs font-bold transition-colors shadow"
           >

@@ -742,9 +742,12 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     }
   };
 
-  const handlePublishToRoblox = async (versionType?: string) => {
+  const handlePublishToRoblox = async (universeIdOverride?: string | any, placeIdOverride?: string | any, versionType?: string | any) => {
     if (!activeProject) return;
     setIsPublishing(true);
+
+    const targetUniverseId = typeof universeIdOverride === 'string' ? universeIdOverride : activeProject.robloxConfig.universeId;
+    const targetPlaceId = typeof placeIdOverride === 'string' ? placeIdOverride : activeProject.robloxConfig.placeId;
 
     const safeVersionType = typeof versionType === 'string' && (versionType === 'Saved' || versionType === 'Published')
       ? versionType
@@ -758,8 +761,8 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
           ...(apiSettings.robloxApiKey ? { 'x-roblox-api-key': apiSettings.robloxApiKey } : {})
         },
         body: JSON.stringify({
-          universeId: activeProject.robloxConfig.universeId,
-          placeId: activeProject.robloxConfig.placeId,
+          universeId: targetUniverseId,
+          placeId: targetPlaceId,
           versionType: safeVersionType,
           projectName: activeProject.name,
           files: activeProject.files,

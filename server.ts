@@ -1493,7 +1493,7 @@ Return JSON with this exact structure:
 
     const targetProjectName = projectName || project?.name || 'Roblox Experience';
     const targetFiles = files || project?.files || {};
-    const targetUniverseId = universeId || project?.robloxConfig?.universeId || '1234567890';
+    const targetUniverseId = universeId || project?.robloxConfig?.universeId;
     let targetPlaceId = placeId || project?.robloxConfig?.placeId;
 
     if (simulate) {
