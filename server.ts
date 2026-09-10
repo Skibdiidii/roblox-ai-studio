@@ -44,7 +44,7 @@ function resolveRobloxKey(req: express.Request): string | undefined {
   return rawKey;
 }
 
-function generateMinimalRbxlx(files: Record<string, any>): string {
+function generateMinimalRbxlx(files: Record<string, any>, previewElements?: any[]): string {
   let referentCounter = 100;
   const getRef = () => `RBX${referentCounter++}`;
 
@@ -55,6 +55,54 @@ function generateMinimalRbxlx(files: Record<string, any>): string {
     StarterPlayer: "",
     StarterGui: ""
   };
+
+  if (previewElements && Array.isArray(previewElements)) {
+    let hasSpawn = false;
+    previewElements.forEach((el, index) => {
+      const isSpawn = el.type === 'spawn';
+      if (isSpawn) hasSpawn = true;
+      const className = isSpawn ? 'SpawnLocation' : 'Part';
+      const posX = el.position?.[0] || 0;
+      const posY = el.position?.[1] || 1;
+      const posZ = el.position?.[2] || 0;
+      const sizeW = el.size?.[0] || 4;
+      const sizeH = el.size?.[1] || 1;
+      const sizeD = el.size?.[2] || 4;
+
+      const partXml = `
+    <Item class="${className}" referent="${getRef()}">
+      <Properties>
+        <string name="Name">${el.name || `Element_${index}`}</string>
+        <bool name="Anchored">true</bool>
+        <Vector3 name="Position"><X>${posX}</X><Y>${posY}</Y><Z>${posZ}</Z></Vector3>
+        <Vector3 name="size"><X>${sizeW}</X><Y>${sizeH}</Y><Z>${sizeD}</Z></Vector3>
+      </Properties>
+    </Item>`;
+      containers.Workspace += partXml;
+    });
+
+    if (!hasSpawn) {
+      containers.Workspace += `
+    <Item class="SpawnLocation" referent="${getRef()}">
+      <Properties>
+        <string name="Name">DefaultSpawn</string>
+        <bool name="Anchored">true</bool>
+        <Vector3 name="Position"><X>0</X><Y>2</Y><Z>0</Z></Vector3>
+        <Vector3 name="size"><X>6</X><Y>0.4</Y><Z>6</Z></Vector3>
+      </Properties>
+    </Item>`;
+    }
+  } else {
+    containers.Workspace += `
+    <Item class="SpawnLocation" referent="${getRef()}">
+      <Properties>
+        <string name="Name">DefaultSpawn</string>
+        <bool name="Anchored">true</bool>
+        <Vector3 name="Position"><X>0</X><Y>2</Y><Z>0</Z></Vector3>
+        <Vector3 name="size"><X>6</X><Y>0.4</Y><Z>6</Z></Vector3>
+      </Properties>
+    </Item>`;
+  }
 
   if (files) {
     Object.values(files).forEach(file => {
@@ -1710,7 +1758,8 @@ Return JSON with this exact structure:
     try {
       const publishUrl = `https://apis.roblox.com/universes/v1/${targetUniverseId}/places/${targetPlaceId}/versions?versionType=${safeVersionType}`;
 
-      const generatedXml = generateMinimalRbxlx(targetFiles);
+      const targetPreviewElements = previewElements || project?.previewElements || [];
+      const generatedXml = generateMinimalRbxlx(targetFiles, targetPreviewElements);
 
       const robloxRes = await fetch(publishUrl, {
         method: 'POST',

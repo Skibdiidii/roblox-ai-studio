@@ -2,6 +2,21 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.4.2',
+    date: '2026-09-10',
+    title: 'Full 3D Environment & Spawn Generation in Published Places',
+    tag: 'Feature',
+    highlights: [
+      'Populated 3D Place Export: Fixed the issue where published places appeared empty when joining the game. The place exporter now automatically serializes all 3D arena parts, props, obstacles, and spawn locations into the Roblox Place (.rbxlx) XML file.',
+      'Guaranteed Spawn Points: Automatically includes default SpawnLocations and arena geometry so players spawn correctly in a fully rendered 3D world when joining your published game.'
+    ],
+    details: [
+      'Updated `generateMinimalRbxlx` in `server.ts` to include `previewElements` and default spawn points.',
+      'Passed project preview elements during Roblox Open Cloud publishing.'
+    ]
+  },
+
+  {
     version: 'v2.4.1',
     date: '2026-09-10',
     title: 'Publish Guidance & Strict Project Chat Isolation',
