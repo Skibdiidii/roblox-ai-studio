@@ -1708,7 +1708,7 @@ Return JSON with this exact structure:
   });
 
   const handleRobloxPublish = async (req: express.Request, res: express.Response) => {
-    const { universeId, placeId, autoCreatePlace, projectName, project, files, simulate, versionType } = req.body;
+    const { universeId, placeId, autoCreatePlace, projectName, project, files, previewElements, simulate, versionType } = req.body;
     const apiKey = resolveRobloxKey(req);
 
     const safeVersionType = typeof versionType === 'string' && (versionType === 'Saved' || versionType === 'Published')
