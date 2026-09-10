@@ -2,6 +2,22 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.3',
+    date: '2026-09-09',
+    title: 'AI Code Memory & Clean Templates',
+    tag: 'Feature',
+    highlights: [
+      'Intelligent Project Context: The AI Chat now reads your entire project\'s active file structure before generating a response, ensuring it perfectly remembers features and scripts previously added.',
+      'True Blank Slate Templates: Cleared out all placeholder `.lua` files from starter templates. Your workspace will now be completely clean when starting a new game type.',
+      'Robust XML Overhaul: Re-engineered the Open Cloud Publisher to inject scripts into a pre-compiled, fully valid Roblox Baseplate.'
+    ],
+    details: [
+      'Passed `activeProject.files` and `activeProject.plan` into the backend system context prompt array.',
+      'Wiped the `files: {}` object maps from `src/data/templates.ts` to prevent dummy scripts from generating.',
+      'Resolved the stubborn "Invalid Content Stream" API rejection by conforming to Roblox Studio\'s strict XML schema requirements.'
+    ]
+  },
+  {
     version: 'v2.3.2',
     date: '2026-09-09',
     title: 'Open Cloud Publisher "Invalid Content Stream" Fix',
