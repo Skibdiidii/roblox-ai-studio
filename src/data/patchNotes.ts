@@ -2,6 +2,20 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.4',
+    date: '2026-09-10',
+    title: 'Open Cloud Content Stream Resolution',
+    tag: 'Hotfix',
+    highlights: [
+      'Resolved Content Type Conflict: Fixed a backend bug where Node was overriding the XML headers with binary octet-streams, causing Roblox to reject the Place files.',
+      'XML Header Compliance: Removed legacy XML declaration tags that conflicted with Roblox Studio\'s internal Rojo schema parsers.'
+    ],
+    details: [
+      'Removed `Buffer.from()` which was forcefully casting the XML payload to a binary stream during the fetch request.',
+      'Aligned the root `<roblox>` tag to exactly match standard `.rbxlx` file headers.'
+    ]
+  },
+  {
     version: 'v2.3.3',
     date: '2026-09-09',
     title: 'AI Code Memory & Clean Templates',
