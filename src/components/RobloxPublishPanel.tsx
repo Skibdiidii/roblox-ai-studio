@@ -60,7 +60,7 @@ export function RobloxPublishPanel({
     if (config.autoCreatePlace !== undefined) {
       setAutoCreatePlace(config.autoCreatePlace);
     }
-  }, [config]);
+  }, [config?.universeId, config?.placeId, config?.autoCreatePlace]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();

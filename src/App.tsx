@@ -87,7 +87,7 @@ export default function App() {
         setOpenTabs(keys.slice(0, 3));
       }
     }
-  }, [activeProject, activeFilePath]);
+  }, [activeProject?.id, activeFilePath]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
