@@ -2,6 +2,22 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.0',
+    date: '2026-09-09',
+    title: 'AI Conversational Memory & Persistent Chat History',
+    tag: 'Feature',
+    highlights: [
+      'Multi-Turn AI Memory: The AI now remembers your previous messages in the current conversation, allowing for natural follow-up questions and refined scripting.',
+      'Persistent Chat State: Chat histories are now automatically saved securely to your local project state. You will not lose your conversation when switching between games or refreshing.',
+      'Project Chat Hand-off: When you use the AI to plan and create a new project, your original context and conversation are seamlessly carried over into the new project workspace.'
+    ],
+    details: [
+      'Engineered an alternating roles message mapping layer to correctly format context history across both Mistral and Gemini stream endpoints.',
+      'Synchronized the active chat session directly into the robust project data model, guaranteeing persistence across the entire environment lifecycle.',
+      'Refactored the new-project generation logic to gracefully preserve the prompt chain that birthed the workspace.'
+    ]
+  },
+  {
     version: 'v2.2.0',
     date: '2026-09-09',
     title: 'Publish Error Fixes & Chat Mode Optimization',
