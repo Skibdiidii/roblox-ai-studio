@@ -32,7 +32,7 @@ function resolveRobloxKey(req: express.Request): string | undefined {
 }
 
 function generateMinimalRbxlx(files: Record<string, any>): string {
-  let referentCounter = 0;
+  let referentCounter = 100;
   const getRef = () => `RBX${referentCounter++}`;
 
   const containers: Record<string, string> = {
@@ -57,12 +57,12 @@ function generateMinimalRbxlx(files: Record<string, any>): string {
       const safeContent = file.content.replace(/]]>/g, "]]]]><![CDATA[>");
       
       const xmlNode = `
-        <Item class="${className}" referent="${getRef()}">
-          <Properties>
-            <string name="Name">${file.name.replace(/\.(server|client)?\.lua$/, "")}</string>
-            <ProtectedString name="Source"><![CDATA[${safeContent}]]></ProtectedString>
-          </Properties>
-        </Item>`;
+    <Item class="${className}" referent="${getRef()}">
+      <Properties>
+        <string name="Name">${file.name.replace(/\.(server|client)?\.lua$/, "")}</string>
+        <ProtectedString name="Source"><![CDATA[${safeContent}]]></ProtectedString>
+      </Properties>
+    </Item>`;
         
       if (containers[root] !== undefined) {
         containers[root] += xmlNode;
@@ -76,36 +76,58 @@ function generateMinimalRbxlx(files: Record<string, any>): string {
 <roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
   <External>null</External>
   <External>nil</External>
-  <Item class="Workspace" referent="${getRef()}">
+  <Item class="Lighting" referent="0">
+    <Properties>
+      <string name="Name">Lighting</string>
+      <Color3 name="Ambient"><R>0</R><G>0</G><B>0</B></Color3>
+      <float name="Brightness">2</float>
+      <bool name="GlobalShadows">true</bool>
+    </Properties>
+  </Item>
+  <Item class="SoundService" referent="1">
+    <Properties>
+      <string name="Name">SoundService</string>
+    </Properties>
+  </Item>
+  <Item class="Workspace" referent="2">
     <Properties>
       <string name="Name">Workspace</string>
     </Properties>
+    <Item class="Part" referent="3">
+      <Properties>
+        <string name="Name">Baseplate</string>
+        <bool name="Anchored">true</bool>
+        <bool name="Locked">true</bool>
+        <Vector3 name="Position"><X>0</X><Y>-10</Y><Z>0</Z></Vector3>
+        <Vector3 name="size"><X>512</X><Y>20</Y><Z>512</Z></Vector3>
+      </Properties>
+    </Item>
     ${containers.Workspace}
   </Item>
-  <Item class="ReplicatedStorage" referent="${getRef()}">
+  <Item class="ReplicatedStorage" referent="4">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
     ${containers.ReplicatedStorage}
   </Item>
-  <Item class="ServerScriptService" referent="${getRef()}">
+  <Item class="ServerScriptService" referent="5">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
     ${containers.ServerScriptService}
   </Item>
-  <Item class="StarterPlayer" referent="${getRef()}">
+  <Item class="StarterPlayer" referent="6">
     <Properties>
       <string name="Name">StarterPlayer</string>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="${getRef()}">
+    <Item class="StarterPlayerScripts" referent="7">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
       ${containers.StarterPlayer}
     </Item>
   </Item>
-  <Item class="StarterGui" referent="${getRef()}">
+  <Item class="StarterGui" referent="8">
     <Properties>
       <string name="Name">StarterGui</string>
     </Properties>
@@ -698,10 +720,25 @@ async function startServer() {
         step: '• Synthesizing real-time response with Luau syntax...'
       });
 
+      
+      let projectContext = '';
+      if (project) {
+        projectContext = `\n\nCURRENT PROJECT:\nName: ${project.name}\n`;
+        if (project.plan && project.plan.concept) {
+           projectContext += `Concept: ${project.plan.concept}\n`;
+        }
+        if (project.files) {
+           projectContext += `\nFiles:\n`;
+           for (const [filePath, fileObj] of Object.entries(project.files)) {
+               projectContext += `\n--- ${filePath} ---\n` + fileObj.content + `\n`;
+           }
+        }
+      }
+
       const systemContext = `You are Roblox AI Studio, an elite assistant and expert Luau engineer powered by Mistral AI.
 You help users with Roblox game architecture, Luau scripting, mechanics, mathematical algorithms, client-server security, UI design, DataStores, animations, and debugging.
 Answer questions directly, clearly, concisely, and provide production-ready Luau scripts when relevant.
-Format code using \`\`\`luau markdown blocks. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.`;
+Format code using \`\`\`luau markdown blocks. CRITICAL: ALWAYS REMOVE CODE COMMENTS from generated code.` + projectContext;
 
       try {
         let streamedAny = false;

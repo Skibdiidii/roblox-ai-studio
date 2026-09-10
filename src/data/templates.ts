@@ -48,36 +48,7 @@ export const GAME_TEMPLATES: GameTemplate[] = [
       npcRequirements: [{ name: 'Sensei', role: 'Shop vendor', count: 1 }],
       configurationValues: [{ key: 'BASE_POWER', value: 10, description: 'Power per hit' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local remotes = Instance.new("Folder")
-remotes.Name = "Remotes"
-remotes.Parent = ReplicatedStorage
-
-local attack = Instance.new("RemoteEvent")
-attack.Name = "AttackDummy"
-attack.Parent = remotes
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local power = Instance.new("IntValue")
-    power.Name = "Power"
-    power.Value = 0
-    power.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'battleground',
@@ -114,41 +85,7 @@ end)
       npcRequirements: [{ name: 'Training Bot', role: 'Sparring partner', count: 2 }],
       configurationValues: [{ key: 'COMBO_WINDOW', value: 0.8, description: 'Seconds before M1 combo resets' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local remotes = Instance.new("Folder")
-remotes.Name = "Remotes"
-remotes.Parent = ReplicatedStorage
-
-local attackEvent = Instance.new("RemoteEvent")
-attackEvent.Name = "PerformAttack"
-attackEvent.Parent = remotes
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local kills = Instance.new("IntValue")
-    kills.Name = "Kills"
-    kills.Value = 0
-    kills.Parent = stats
-
-    local streak = Instance.new("IntValue")
-    streak.Name = "Streak"
-    streak.Value = 0
-    streak.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'obby',
@@ -185,27 +122,7 @@ end)
       npcRequirements: [{ name: 'Guide Bot', role: 'Provides tutorial hints', count: 1 }],
       configurationValues: [{ key: 'TOTAL_STAGES', value: 50, description: 'Total level count' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local stage = Instance.new("IntValue")
-    stage.Name = "Stage"
-    stage.Value = 1
-    stage.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'tycoon',
@@ -241,27 +158,7 @@ end)
       npcRequirements: [],
       configurationValues: [{ key: 'BASE_ORE_VALUE', value: 5, description: 'Cash per copper ore' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local cash = Instance.new("IntValue")
-    cash.Name = "Cash"
-    cash.Value = 0
-    cash.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'tower-defense',
@@ -297,27 +194,7 @@ end)
       npcRequirements: [{ name: 'Commander NPC', role: 'Initiates match voting', count: 1 }],
       configurationValues: [{ key: 'STARTING_CASH', value: 650, description: 'Initial building funds' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local gold = Instance.new("IntValue")
-    gold.Name = "Gold"
-    gold.Value = 650
-    gold.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'survival',
@@ -353,27 +230,7 @@ end)
       npcRequirements: [],
       configurationValues: [{ key: 'DAY_LENGTH_SECONDS', value: 300, description: 'Seconds per day/night cycle' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local days = Instance.new("IntValue")
-    days.Name = "Days"
-    days.Value = 1
-    days.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'rpg',
@@ -409,32 +266,7 @@ end)
       npcRequirements: [{ name: 'Mayor', role: 'Main storyline quest line', count: 1 }],
       configurationValues: [{ key: 'BASE_EXP_REQUIREMENT', value: 100, description: 'EXP needed for level 2' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local level = Instance.new("IntValue")
-    level.Name = "Level"
-    level.Value = 1
-    level.Parent = stats
-
-    local gold = Instance.new("IntValue")
-    gold.Name = "Gold"
-    gold.Value = 50
-    gold.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'clicker',
@@ -469,32 +301,7 @@ end)
       npcRequirements: [],
       configurationValues: [{ key: 'BASE_CLICK_GAIN', value: 1, description: 'Clicks per raw tap' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local clicks = Instance.new("IntValue")
-    clicks.Name = "Clicks"
-    clicks.Value = 0
-    clicks.Parent = stats
-
-    local gems = Instance.new("IntValue")
-    gems.Name = "Gems"
-    gems.Value = 0
-    gems.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   },
   {
     id: 'wave-defense',
@@ -530,31 +337,6 @@ end)
       npcRequirements: [{ name: 'Infected Runner', role: 'Aggressive melee enemy', count: 10 }],
       configurationValues: [{ key: 'ZOMBIE_DAMAGE', value: 25, description: 'Hit damage to player' }]
     },
-    files: {
-      'ServerScriptService/Main.server.lua': {
-        path: 'ServerScriptService/Main.server.lua',
-        name: 'Main.server.lua',
-        language: 'luau',
-        type: 'server',
-        content: `local Players = game:GetService("Players")
-
-Players.PlayerAdded:Connect(function(player)
-    local stats = Instance.new("Folder")
-    stats.Name = "leaderstats"
-    stats.Parent = player
-
-    local points = Instance.new("IntValue")
-    points.Name = "Points"
-    points.Value = 500
-    points.Parent = stats
-
-    local wave = Instance.new("IntValue")
-    wave.Name = "Wave"
-    wave.Value = 1
-    wave.Parent = stats
-end)
-`
-      }
-    }
+    files: {}
   }
 ];

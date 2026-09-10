@@ -272,7 +272,11 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         body: JSON.stringify({
           prompt,
           mode: determinedMode,
-          project: activeProject ? { name: activeProject.name } : undefined,
+          project: activeProject ? { 
+            name: activeProject.name,
+            plan: activeProject.plan,
+            files: activeProject.files
+          } : undefined,
           attachments: attachments || [],
           history: messages.map(m => ({ role: m.sender, content: m.content })).filter(m => m.content),
           provider: apiSettings.provider,
