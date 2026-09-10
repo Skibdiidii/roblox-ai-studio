@@ -648,7 +648,7 @@ async function* streamUniversalAI(
     }
   }
 
-  throw new Error('No AI streaming provider succeeded');
+  throw new Error('AI Provider Quota or Rate Limit exceeded. Please check your Gemini or Mistral API key and billing plan at https://ai.google.dev/gemini-api/docs/rate-limits or configure a custom API key in API Settings.');
 }
 
 async function startServer() {
