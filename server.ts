@@ -31,6 +31,89 @@ function resolveRobloxKey(req: express.Request): string | undefined {
   return headerKey || bodyKey || process.env.ROBLOX_OPEN_CLOUD_API_KEY;
 }
 
+function generateMinimalRbxlx(files: Record<string, any>): string {
+  let referentCounter = 0;
+  const getRef = () => `RBX${referentCounter++}`;
+
+  const containers: Record<string, string> = {
+    Workspace: "",
+    ReplicatedStorage: "",
+    ServerScriptService: "",
+    StarterPlayer: "",
+    StarterGui: ""
+  };
+
+  if (files) {
+    Object.values(files).forEach(file => {
+      if (!file.path || !file.content) return;
+      
+      const parts = file.path.split("/");
+      const root = parts[0];
+      
+      let className = "ModuleScript";
+      if (file.name.includes(".server.")) className = "Script";
+      else if (file.name.includes(".client.")) className = "LocalScript";
+      
+      const safeContent = file.content.replace(/]]>/g, "]]]]><![CDATA[>");
+      
+      const xmlNode = `
+        <Item class="${className}" referent="${getRef()}">
+          <Properties>
+            <string name="Name">${file.name.replace(/\.(server|client)?\.lua$/, "")}</string>
+            <ProtectedString name="Source"><![CDATA[${safeContent}]]></ProtectedString>
+          </Properties>
+        </Item>`;
+        
+      if (containers[root] !== undefined) {
+        containers[root] += xmlNode;
+      } else {
+        containers.ServerScriptService += xmlNode;
+      }
+    });
+  }
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+  <External>null</External>
+  <External>nil</External>
+  <Item class="Workspace" referent="${getRef()}">
+    <Properties>
+      <string name="Name">Workspace</string>
+    </Properties>
+    ${containers.Workspace}
+  </Item>
+  <Item class="ReplicatedStorage" referent="${getRef()}">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    ${containers.ReplicatedStorage}
+  </Item>
+  <Item class="ServerScriptService" referent="${getRef()}">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    ${containers.ServerScriptService}
+  </Item>
+  <Item class="StarterPlayer" referent="${getRef()}">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="${getRef()}">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      ${containers.StarterPlayer}
+    </Item>
+  </Item>
+  <Item class="StarterGui" referent="${getRef()}">
+    <Properties>
+      <string name="Name">StarterGui</string>
+    </Properties>
+    ${containers.StarterGui}
+  </Item>
+</roblox>`;
+}
+
 function safeExtractJson<T = any>(rawText: string, fallback: T | null = null): T | null {
   if (!rawText || typeof rawText !== 'string') return fallback;
 
@@ -1534,19 +1617,15 @@ Return JSON with this exact structure:
     try {
       const publishUrl = `https://apis.roblox.com/universes/v1/${targetUniverseId}/places/${targetPlaceId}/versions?versionType=${safeVersionType}`;
 
-      const projectSummary = JSON.stringify({
-        name: targetProjectName,
-        exportedAt: new Date().toISOString(),
-        fileCount: targetFiles ? Object.keys(targetFiles).length : 0
-      });
+      const generatedXml = generateMinimalRbxlx(targetFiles);
 
       const robloxRes = await fetch(publishUrl, {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
-          'Content-Type': 'application/octet-stream'
+          'Content-Type': 'application/xml'
         },
-        body: Buffer.from(projectSummary, 'utf-8')
+        body: Buffer.from(generatedXml, 'utf-8')
       });
 
       const responseText = await robloxRes.text();
