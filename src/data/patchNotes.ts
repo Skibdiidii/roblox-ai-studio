@@ -2,6 +2,22 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.2',
+    date: '2026-09-09',
+    title: 'Open Cloud Publisher "Invalid Content Stream" Fix',
+    tag: 'Hotfix',
+    highlights: [
+      'Valid Roblox XML Generation: The publishing backend now correctly compiles your project scripts into a valid `.rbxlx` XML Place structure instead of sending a raw JSON payload.',
+      'Instant Place Overrides: When publishing to an existing Place via Open Cloud, your AI-generated scripts and systems are injected securely into the Place architecture without being rejected.',
+      'Data Type Enforcement: The Publisher route strictly specifies the `application/xml` header to ensure Roblox\'s Open Cloud gateway parses your files correctly.'
+    ],
+    details: [
+      'Implemented a backend `.rbxlx` XML constructor engine that dynamically injects Lua files into ServerScriptService, Workspace, and StarterPlayer.',
+      'Replaced the legacy `projectSummary` JSON dummy payload with genuine Place file generation.',
+      'Modified the `fetch` API request Content-Type to `application/xml`.'
+    ]
+  },
+  {
     version: 'v2.3.1',
     date: '2026-09-09',
     title: 'Roblox Open Cloud Publishing Architecture Fix',
