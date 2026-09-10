@@ -2,6 +2,21 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.7',
+    date: '2026-09-10',
+    title: 'Publishing Guidance & Studio Export',
+    tag: 'Publish',
+    highlights: [
+      'Publishing Clarity: Clarified the difference between Sandbox Simulation and Live Open Cloud Publishing.',
+      'Roblox Studio Import: Emphasized that to update your live Roblox game date, you can use the direct .rbxlx XML export or configure a real Open Cloud API key with Place permissions.'
+    ],
+    details: [
+      'Ensured all publishing pathways support standard XML structure.',
+      'Verified GitHub remote synchronization with user token.'
+    ]
+  },
+
+  {
     version: 'v2.3.6',
     date: '2026-09-10',
     title: 'Smart Feature Implementation',
