@@ -1,4 +1,4 @@
-export type ScriptType = 'server' | 'client' | 'module' | 'config' | 'doc' | 'scene';
+export type ScriptType = 'server' | 'client' | 'module' | 'config' | 'doc' | 'scene' | 'asset';
 
 export type AppView = 'dashboard' | 'chat' | 'editor' | 'validator' | 'publish';
 
@@ -10,7 +10,7 @@ export interface ProjectFile {
   path: string;
   name: string;
   content: string;
-  language: 'luau' | 'lua' | 'json' | 'markdown';
+  language: 'luau' | 'lua' | 'json' | 'markdown' | 'glb' | 'obj' | 'fbx' | 'model' | 'image' | 'audio';
   type: ScriptType;
 }
 

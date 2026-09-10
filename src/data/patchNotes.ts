@@ -2,6 +2,23 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.5',
+    date: '2026-09-10',
+    title: 'Asset Support & Quality of Life',
+    tag: 'Feature',
+    highlights: [
+      'New Chat Reset: Added a "New Chat" button to the AI Architect to instantly clear your conversational history for a fresh start.',
+      'Clear Publish State: Added a "Clear Publish" button to the Deployment panel to wipe your target Universe and Place IDs if you need to switch targets or reset config.',
+      '3D Asset Tracking: The File Explorer now tracks 3D visual assets like `.glb`, `.obj`, `.fbx`, and `.model`, along with audio and image files, fully equipping the AI with your exact asset tree hierarchy.'
+    ],
+    details: [
+      'Updated `App.tsx` to allow clearing `chatHistory` context window.',
+      'Implemented `handleClearPublish` to wipe the project\'s `robloxConfig` state object.',
+      'Added multimodal extension mappings (asset, image, audio, model) into `FileExplorer.tsx`.'
+    ]
+  },
+
+  {
     version: 'v2.3.4',
     date: '2026-09-10',
     title: 'Open Cloud Content Stream Resolution',

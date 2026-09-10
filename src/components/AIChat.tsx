@@ -30,6 +30,7 @@ interface AIChatProps {
   onSendMessage: (prompt: string, attachments?: ChatAttachment[]) => void;
   onApprovePlan: (plan: GamePlan) => void;
   onOpenCodeInEditor?: (filePath: string) => void;
+  onClearChat?: () => void;
 }
 
 export function AIChat({
@@ -39,7 +40,8 @@ export function AIChat({
   isGenerating,
   onSendMessage,
   onApprovePlan,
-  onOpenCodeInEditor
+  onOpenCodeInEditor,
+  onClearChat
 }: AIChatProps) {
   const [inputPrompt, setInputPrompt] = useState('');
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
@@ -274,6 +276,16 @@ export function AIChat({
           </div>
         </div>
 
+        {onClearChat && (
+          <button
+            onClick={onClearChat}
+            className="flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shadow transition-colors"
+            title="Start New Chat"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            New Chat
+          </button>
+        )}
         {stage < 4 && currentPlan && (
           <button
             id="btn-approve-plan-header"

@@ -177,15 +177,22 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     });
   };
 
-  const handleAddFile = (path: string, type: 'server' | 'client' | 'module') => {
+  const handleAddFile = (path: string, type: any) => {
     const parts = path.split('/');
     const name = parts[parts.length - 1];
 
     let initialCode = '--!strict\n';
+    let lang = 'luau';
     if (type === 'server') {
       initialCode += 'local Players = game:GetService("Players")\n\nprint("[Server] ' + name + ' initialized")\n';
     } else if (type === 'client') {
       initialCode += 'local Players = game:GetService("Players")\nlocal player = Players.LocalPlayer\n\nprint("[Client] ' + name + ' initialized")\n';
+    } else if (type === 'asset') {
+      initialCode = 'Binary or visual asset placeholder. (Roblox AI Studio asset integration)';
+      if (name.match(/\.(png|jpg|jpeg|gif)$/i)) lang = 'image';
+      else if (name.match(/\.(glb|obj|fbx|model)$/i)) lang = 'model';
+      else if (name.match(/\.(mp3|wav|ogg)$/i)) lang = 'audio';
+      else lang = 'json';
     } else {
       initialCode += 'local ' + name.replace(/[^a-zA-Z0-9]/g, '') + ' = {}\n\nreturn ' + name.replace(/[^a-zA-Z0-9]/g, '') + '\n';
     }
@@ -194,7 +201,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       path,
       name,
       content: initialCode,
-      language: 'luau',
+      language: lang as any,
       type
     };
 
@@ -220,6 +227,32 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     if (activeFilePath === path) {
       setActiveFilePath(filtered[filtered.length - 1] || '');
     }
+  };
+
+  
+  const handleClearChat = () => {
+    setMessages([]);
+    if (activeProject) {
+      updateActiveProject(prev => ({
+        ...prev,
+        chatHistory: []
+      }));
+    }
+  };
+
+  const handleClearPublish = () => {
+    if (!activeProject) return;
+    updateActiveProject(prev => ({
+      ...prev,
+      robloxConfig: {
+        universeId: '',
+        placeId: '',
+        apiKeyConfigured: false,
+        status: 'NEEDS_CONFIGURATION',
+        lastPublishMessage: '',
+        lastPublishedAt: null
+      }
+    }));
   };
 
   const handleSendMessage = async (prompt: string, attachments?: ChatAttachment[]) => {
@@ -852,6 +885,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         onOpenPatchNotes={() => setIsPatchNotesOpen(true)}
         onOpenApiSettings={() => setIsApiSettingsOpen(true)}
         onExport={() => handleExportProject()}
+                onClearPublish={handleClearPublish}
       />
 
       <main className="flex-1 flex overflow-hidden relative">
@@ -882,6 +916,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
               isGenerating={isGenerating}
               onSendMessage={handleSendMessage}
               onApprovePlan={handleApprovePlan}
+              onClearChat={handleClearChat}
               onOpenCodeInEditor={(path) => {
                 if (activeProject && activeProject.files[path]) {
                   setActiveFilePath(path);

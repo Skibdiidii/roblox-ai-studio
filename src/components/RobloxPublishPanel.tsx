@@ -27,6 +27,7 @@ interface RobloxPublishPanelProps {
   onSimulatePublish: () => Promise<void>;
   onCreatePlaceNow: () => Promise<void>;
   onExport: () => void;
+  onClearPublish?: () => void;
   isPublishing: boolean;
   isTesting: boolean;
   isCreatingPlace: boolean;
@@ -42,6 +43,7 @@ export function RobloxPublishPanel({
   onSimulatePublish,
   onCreatePlaceNow,
   onExport,
+  onClearPublish,
   isPublishing,
   isTesting,
   isCreatingPlace,

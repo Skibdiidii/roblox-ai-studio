@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { ProjectFile } from '../types';
 import {
   Folder,
+  Image,
+  BoxSelect,
+  FileArchive,
+  Music,
   FolderOpen,
   FileCode,
   FileText,
@@ -18,7 +22,7 @@ interface FileExplorerProps {
   files: Record<string, ProjectFile>;
   activeFilePath: string | null;
   onSelectFile: (path: string) => void;
-  onAddFile: (path: string, type: 'server' | 'client' | 'module') => void;
+  onAddFile: (path: string, type: any) => void;
 }
 
 export function FileExplorer({ files, activeFilePath, onSelectFile, onAddFile }: FileExplorerProps) {
@@ -27,7 +31,7 @@ export function FileExplorer({ files, activeFilePath, onSelectFile, onAddFile }:
   const [isAddingFile, setIsAddingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [newFileFolder, setNewFileFolder] = useState('ServerScriptService/Systems');
-  const [newFileType, setNewFileType] = useState<'server' | 'client' | 'module'>('server');
+  const [newFileType, setNewFileType] = useState<any>('server');
 
   const toggleFolder = (folder: string) => {
     setCollapsedFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
@@ -61,7 +65,7 @@ export function FileExplorer({ files, activeFilePath, onSelectFile, onAddFile }:
     setIsAddingFile(false);
   };
 
-  const getFileIcon = (file: ProjectFile) => {
+    const getFileIcon = (file: ProjectFile) => {
     if (file.path.endsWith('.server.lua')) {
       return <Server className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
     }
@@ -73,6 +77,15 @@ export function FileExplorer({ files, activeFilePath, onSelectFile, onAddFile }:
     }
     if (file.path.endsWith('.md')) {
       return <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />;
+    }
+    if (file.path.match(/\.(png|jpg|jpeg|gif)$/i)) {
+      return <Image className="w-3.5 h-3.5 text-pink-400 shrink-0" />;
+    }
+    if (file.path.match(/\.(glb|obj|fbx|model)$/i)) {
+      return <BoxSelect className="w-3.5 h-3.5 text-orange-400 shrink-0" />;
+    }
+    if (file.path.match(/\.(mp3|wav|ogg)$/i)) {
+      return <Music className="w-3.5 h-3.5 text-lime-400 shrink-0" />;
     }
     return <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />;
   };
@@ -133,6 +146,7 @@ export function FileExplorer({ files, activeFilePath, onSelectFile, onAddFile }:
               <option value="server">Server (.server.lua)</option>
               <option value="client">Client (.client.lua)</option>
               <option value="module">Module (.lua)</option>
+              <option value="asset">Asset (3D/Image)</option>
             </select>
           </div>
 
