@@ -282,17 +282,16 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     const isProjectActive = Boolean(activeProject && stage >= 4);
 
     const isModifyIntent = isProjectActive && (
-      lower.startsWith('add ') ||
-      lower.startsWith('create ') ||
-      lower.startsWith('make ') ||
-      lower.startsWith('build ') ||
-      lower.startsWith('generate ') ||
-      lower.startsWith('change ') ||
-      lower.startsWith('update ') ||
-      lower.startsWith('fix ') ||
-      lower.startsWith('modify ') ||
-      lower.startsWith('implement ')
-    );
+      lower.includes('add') ||
+      lower.includes('create') ||
+      lower.includes('make') ||
+      lower.includes('build') ||
+      lower.includes('implement') ||
+      lower.includes('update') ||
+      lower.includes('fix') ||
+      lower.includes('modify') ||
+      lower.includes('change')
+    ) && !lower.startsWith('how ') && !lower.startsWith('what ') && !lower.startsWith('why ') && !lower.startsWith('can you explain');
 
     const isExplicitCreateNew = !isProjectActive && (
       lower.startsWith('create ') ||
