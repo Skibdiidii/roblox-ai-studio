@@ -279,7 +279,23 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     setIsGenerating(true);
 
     const lower = (prompt || '').toLowerCase().trim();
-    const isExplicitCreate = lower.startsWith('create ') ||
+    const isProjectActive = Boolean(activeProject && stage >= 4);
+
+    const isModifyIntent = isProjectActive && (
+      lower.startsWith('add ') ||
+      lower.startsWith('create ') ||
+      lower.startsWith('make ') ||
+      lower.startsWith('build ') ||
+      lower.startsWith('generate ') ||
+      lower.startsWith('change ') ||
+      lower.startsWith('update ') ||
+      lower.startsWith('fix ') ||
+      lower.startsWith('modify ') ||
+      lower.startsWith('implement ')
+    );
+
+    const isExplicitCreateNew = !isProjectActive && (
+      lower.startsWith('create ') ||
       lower.startsWith('make a ') ||
       lower.startsWith('build a ') ||
       lower.startsWith('generate ') ||
@@ -287,14 +303,84 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       lower.includes('simulator') ||
       lower.includes('tycoon') ||
       lower.includes('obby') ||
-      lower.includes('create game');
+      lower.includes('create game')
+    );
 
-    const determinedMode = isExplicitCreate ? 'plan' : 'freeform';
+    const determinedMode = isExplicitCreateNew ? 'plan' : 'freeform';
     if (determinedMode === 'plan') {
       setStage(2);
     }
 
     try {
+      if (isModifyIntent && activeProject) {
+        setMessages(prev => {
+          const arr = [...prev];
+          const last = arr[arr.length - 1];
+          if (last && last.id === aiMsgId) {
+            last.thinking = '• Analyzing project architecture and synthesizing modifications...';
+          }
+          return arr;
+        });
+
+        const response = await fetch('/api/ai/modify-game', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiSettings.mistralApiKey ? { 'x-mistral-api-key': apiSettings.mistralApiKey } : {}),
+            ...(apiSettings.geminiApiKey ? { 'x-gemini-api-key': apiSettings.geminiApiKey } : {})
+          },
+          body: JSON.stringify({
+            prompt,
+            project: activeProject,
+            provider: apiSettings.provider,
+            mistralApiKey: apiSettings.mistralApiKey,
+            geminiApiKey: apiSettings.geminiApiKey,
+            preferredModel: apiSettings.preferredModel
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`AI Service returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        const modifiedFilePaths = data.files ? Object.keys(data.files) : [];
+
+        if (data.files && Object.keys(data.files).length > 0) {
+          updateActiveProject(prev => ({
+            ...prev,
+            lastModified: Date.now(),
+            files: {
+              ...prev.files,
+              ...data.files
+            },
+            previewElements: data.previewElements || prev.previewElements
+          }));
+
+          if (modifiedFilePaths.length > 0) {
+            setActiveFilePath(modifiedFilePaths[0]);
+            setOpenTabs(prev => Array.from(new Set([...prev, ...modifiedFilePaths])));
+          }
+        }
+
+        setMessages(prev => {
+          const arr = [...prev];
+          const aiIndex = arr.findIndex(m => m.id === aiMsgId);
+          if (aiIndex !== -1) {
+            arr[aiIndex] = {
+              ...arr[aiIndex],
+              isThinking: false,
+              isStreaming: false,
+              content: data.explanation || 'I have updated the game project according to your request.',
+              modifiedFiles: modifiedFilePaths
+            };
+          }
+          return arr;
+        });
+        setIsGenerating(false);
+        return;
+      }
+
       const response = await fetch('/api/ai/chat-stream', {
         method: 'POST',
         headers: {

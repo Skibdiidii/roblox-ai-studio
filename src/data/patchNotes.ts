@@ -2,6 +2,21 @@ import { PatchNote } from '../types';
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: 'v2.3.6',
+    date: '2026-09-10',
+    title: 'Smart Feature Implementation',
+    tag: 'Feature',
+    highlights: [
+      'True AI Feature Updates: Fixed a major limitation where the AI would only output Lua scripts into the chat stream when asked to modify or add features. Now, it actively updates and applies code directly to your project files!',
+      'Context-Aware Workflow: The AI intelligently differentiates between conversational questions (e.g., "explain DataStores") and action intents (e.g., "add a jump pad").'
+    ],
+    details: [
+      'Restored the `/api/ai/modify-game` backend pipeline in `App.tsx`.',
+      'Added dynamic intent parsing (`isModifyIntent`) to accurately switch between stream rendering and JSON file modifications.'
+    ]
+  },
+
+  {
     version: 'v2.3.5',
     date: '2026-09-10',
     title: 'Asset Support & Quality of Life',
