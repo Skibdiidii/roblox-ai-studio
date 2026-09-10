@@ -111,6 +111,42 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
     localStorage.setItem('roblox_ai_projects', JSON.stringify(projects));
   }, [projects]);
 
+  const currentProjectIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeProject) {
+      if (currentProjectIdRef.current !== activeProject.id) {
+        // Project switched: load the new project's chat history
+        currentProjectIdRef.current = activeProject.id;
+        if (activeProject.chatHistory && activeProject.chatHistory.length > 0) {
+          setMessages(activeProject.chatHistory);
+        } else {
+          setMessages([
+            {
+              id: 'welcome-msg',
+              sender: 'ai',
+              content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).\n\nYou can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
+              timestamp: Date.now()
+            }
+          ]);
+        }
+      } else {
+        // Same project, messages updated: sync to project
+        if (messages.length > 0) {
+          const isDifferent = JSON.stringify(activeProject.chatHistory) !== JSON.stringify(messages);
+          if (isDifferent) {
+            updateActiveProject(prev => ({
+              ...prev,
+              chatHistory: messages
+            }));
+          }
+        }
+      }
+    } else {
+      currentProjectIdRef.current = null;
+    }
+  }, [activeProject, messages]);
+
   const handleSaveApiSettings = (newSettings: ApiSettings) => {
     setApiSettings(newSettings);
     localStorage.setItem('roblox_ai_api_settings', JSON.stringify(newSettings));
@@ -238,6 +274,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
           mode: determinedMode,
           project: activeProject ? { name: activeProject.name } : undefined,
           attachments: attachments || [],
+          history: messages.map(m => ({ role: m.sender, content: m.content })).filter(m => m.content),
           provider: apiSettings.provider,
           mistralApiKey: apiSettings.mistralApiKey,
           geminiApiKey: apiSettings.geminiApiKey,
@@ -411,6 +448,19 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       const data = await response.json();
       const generatedFiles: Record<string, ProjectFile> = data.files || {};
 
+      const filePaths = Object.keys(generatedFiles);
+      
+      const newMessages: ChatMessage[] = [
+        ...messages,
+        {
+          id: `ai-files-${Date.now()}`,
+          sender: 'ai',
+          content: `All production-ready Luau scripts and architecture for "${plan.title}" have been successfully created (${filePaths.length} files).\n\nYou can switch to the Code Editor from the hamburger menu to inspect scripts, validate logic, or publish directly to Roblox Open Cloud.`,
+          modifiedFiles: filePaths,
+          timestamp: Date.now()
+        }
+      ];
+
       const newProjectId = `proj-${Date.now()}`;
       const newProject: Project = {
         id: newProjectId,
@@ -422,7 +472,7 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
         files: generatedFiles,
         previewElements: [],
         validationIssues: [],
-        chatHistory: [],
+        chatHistory: newMessages,
         robloxConfig: {
           universeId: '',
           placeId: '',
@@ -438,22 +488,12 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       setActiveProjectId(newProjectId);
       setStage(4);
 
-      const filePaths = Object.keys(generatedFiles);
       if (filePaths.length > 0) {
         setActiveFilePath(filePaths[0]);
         setOpenTabs(filePaths.slice(0, 4));
       }
 
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `ai-files-${Date.now()}`,
-          sender: 'ai',
-          content: `All production-ready Luau scripts and architecture for "${plan.title}" have been successfully created (${filePaths.length} files).\n\nYou can switch to the Code Editor from the hamburger menu to inspect scripts, validate logic, or publish directly to Roblox Open Cloud.`,
-          modifiedFiles: filePaths,
-          timestamp: Date.now()
-        }
-      ]);
+      setMessages(newMessages);
 
       setCurrentView('editor');
     } catch (err: any) {
@@ -537,9 +577,18 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
   };
 
   const handleNewProject = () => {
+    setActiveProjectId('');
     setStage(1);
     setCurrentPlan(null);
     setCurrentView('chat');
+    setMessages([
+      {
+        id: 'welcome-msg',
+        sender: 'ai',
+        content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).\n\nYou can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
+        timestamp: Date.now()
+      }
+    ]);
   };
 
   const handleDuplicateProject = (project: Project) => {

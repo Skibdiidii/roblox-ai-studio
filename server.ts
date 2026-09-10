@@ -273,7 +273,7 @@ async function* streamGemini(ai: GoogleGenAI, contents: any, preferredModel?: st
   throw lastError;
 }
 
-function buildMistralMessages(systemPrompt: string, userText: string, attachments?: any[]) {
+function buildMistralMessages(systemPrompt: string, userText: string, attachments?: any[], history?: any[]) {
   const hasImages = attachments?.some(a => a.type === 'image' && a.data);
   const messages: any[] = [];
 
@@ -282,6 +282,17 @@ function buildMistralMessages(systemPrompt: string, userText: string, attachment
       role: 'system',
       content: systemPrompt
     });
+  }
+
+  if (history && Array.isArray(history)) {
+    for (const msg of history) {
+      if (msg.role === 'system') continue; // We already have a system prompt
+      const role = (msg.role === 'ai' || msg.role === 'model') ? 'assistant' : 'user';
+      messages.push({
+        role,
+        content: msg.content
+      });
+    }
   }
 
   if (hasImages) {
@@ -325,35 +336,73 @@ function buildMistralMessages(systemPrompt: string, userText: string, attachment
   return { messages, hasImages };
 }
 
-function buildGeminiContents(systemPrompt: string, userText: string, attachments?: any[]) {
+function buildGeminiContents(systemPrompt: string, userText: string, attachments?: any[], history?: any[]) {
   const contentsPayload: any[] = [];
+
+  const promptText = systemPrompt ? `${systemPrompt}\n\n` : '';
+  
+  if (history && Array.isArray(history)) {
+    let lastRole = '';
+    for (const msg of history) {
+      if (msg.role === 'system') continue;
+      const role = msg.role === 'user' ? 'user' : 'model';
+      
+      // Gemini requires alternating roles starting with 'user' typically, 
+      // but if the first is 'model' it might fail. Let's just append.
+      // To be safe and merge consecutive same-role messages:
+      if (role === lastRole && contentsPayload.length > 0) {
+        contentsPayload[contentsPayload.length - 1].parts[0].text += `\n\n${msg.content}`;
+      } else {
+        // If the very first message is from the model, we can prepend a dummy user message or skip it.
+        if (contentsPayload.length === 0 && role === 'model') {
+           // Skip initial AI welcome message to avoid Gemini error
+           continue;
+        }
+        contentsPayload.push({
+          role,
+          parts: [{ text: msg.content }]
+        });
+        lastRole = role;
+      }
+    }
+  }
+
+  const parts: any[] = [];
+  parts.push({ text: promptText + userText });
 
   if (attachments && Array.isArray(attachments)) {
     for (const att of attachments) {
       if (att.type === 'image' && att.data) {
         const rawBase64 = att.data.includes('base64,') ? att.data.split('base64,')[1] : att.data;
-        contentsPayload.push({
+        parts.push({
           inlineData: {
             mimeType: att.mimeType || 'image/png',
             data: rawBase64
           }
         });
       } else if (att.data) {
-        contentsPayload.push({
+        parts.push({
           text: `[Attached File: ${att.name}]\n\`\`\`\n${att.data}\n\`\`\`\n`
         });
       }
     }
   }
 
-  const promptText = systemPrompt ? `${systemPrompt}\n\n${userText}` : userText;
-  contentsPayload.push({ text: promptText });
+  if (contentsPayload.length > 0 && contentsPayload[contentsPayload.length - 1].role === 'user') {
+    contentsPayload[contentsPayload.length - 1].parts.push(...parts);
+  } else {
+    contentsPayload.push({
+      role: 'user',
+      parts
+    });
+  }
+
   return contentsPayload;
 }
 
 async function callUniversalAI(
   req: express.Request,
-  options: { systemPrompt?: string; userPrompt: string; attachments?: any[]; preferredModel?: string }
+  options: { systemPrompt?: string; userPrompt: string; attachments?: any[]; preferredModel?: string; history?: any[] }
 ): Promise<{ text: string }> {
   const mistralKey = resolveMistralKey(req);
   const geminiKey = resolveGeminiKey(req);
@@ -362,7 +411,8 @@ async function callUniversalAI(
   const { messages, hasImages } = buildMistralMessages(
     options.systemPrompt || '',
     options.userPrompt,
-    options.attachments
+    options.attachments,
+    options.history || req.body?.history
   );
 
   if (mistralKey) {
@@ -380,7 +430,8 @@ async function callUniversalAI(
       const contents = buildGeminiContents(
         options.systemPrompt || '',
         options.userPrompt,
-        options.attachments
+        options.attachments,
+        options.history || req.body?.history
       );
       const geminiRes = await callGemini(ai, contents, preferredModel);
       return { text: geminiRes.text };
@@ -392,7 +443,7 @@ async function callUniversalAI(
 
 async function* streamUniversalAI(
   req: express.Request,
-  options: { systemPrompt?: string; userPrompt: string; attachments?: any[]; preferredModel?: string }
+  options: { systemPrompt?: string; userPrompt: string; attachments?: any[]; preferredModel?: string; history?: any[] }
 ): AsyncGenerator<{ text: string }> {
   const mistralKey = resolveMistralKey(req);
   const geminiKey = resolveGeminiKey(req);
@@ -401,7 +452,8 @@ async function* streamUniversalAI(
   const { messages, hasImages } = buildMistralMessages(
     options.systemPrompt || '',
     options.userPrompt,
-    options.attachments
+    options.attachments,
+    options.history || req.body?.history
   );
 
   if (mistralKey) {
@@ -421,7 +473,8 @@ async function* streamUniversalAI(
       const contents = buildGeminiContents(
         options.systemPrompt || '',
         options.userPrompt,
-        options.attachments
+        options.attachments,
+        options.history || req.body?.history
       );
       for await (const chunk of streamGemini(ai, contents, preferredModel)) {
         yield chunk;
