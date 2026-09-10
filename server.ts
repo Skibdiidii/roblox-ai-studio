@@ -72,8 +72,7 @@ function generateMinimalRbxlx(files: Record<string, any>): string {
     });
   }
 
-  return `<?xml version="1.0" encoding="utf-8"?>
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+  return `<roblox version="4">
   <External>null</External>
   <External>nil</External>
   <Item class="Lighting" referent="0">
@@ -1662,7 +1661,7 @@ Return JSON with this exact structure:
           'x-api-key': apiKey,
           'Content-Type': 'application/xml'
         },
-        body: Buffer.from(generatedXml, 'utf-8')
+        body: generatedXml
       });
 
       const responseText = await robloxRes.text();
