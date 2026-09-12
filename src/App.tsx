@@ -75,8 +75,8 @@ export default function App() {
   const [isPatchNotesOpen, setIsPatchNotesOpen] = useState(true);
 
   const activeProject = useMemo(() => {
-    if (!projects.length) return null;
-    return projects.find(p => p.id === activeProjectId) || projects[0] || null;
+    if (!projects.length || !activeProjectId) return null;
+    return projects.find(p => p.id === activeProjectId) || null;
   }, [projects, activeProjectId]);
 
   useEffect(() => {
@@ -132,6 +132,14 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       }
     } else {
       currentProjectIdRef.current = null;
+      setMessages([
+        {
+          id: 'welcome-msg',
+          sender: 'ai',
+          content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).\n\nYou can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
+          timestamp: Date.now()
+        }
+      ]);
     }
   }, [activeProject?.id]);
 
@@ -699,18 +707,43 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
   };
 
   const handleNewProject = () => {
-    setActiveProjectId('');
+    const newId = `proj-${Date.now()}`;
+    const newProj: Project = {
+      id: newId,
+      name: 'New Roblox Game',
+      description: 'Describe your game concept to build...',
+      stage: 1,
+      plan: null,
+      lastModified: Date.now(),
+      files: {},
+      previewElements: [],
+      validationIssues: [],
+      chatHistory: [
+        {
+          id: 'welcome-msg',
+          sender: 'ai',
+          content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).\n\nYou can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
+          timestamp: Date.now()
+        }
+      ],
+      robloxConfig: {
+        universeId: '',
+        placeId: '',
+        autoCreatePlace: true,
+        status: 'NEEDS_CONFIGURATION',
+        apiKeyConfigured: false,
+        lastPublishMessage: 'Ready to build or generate game architecture.',
+        lastPublishedAt: null
+      }
+    };
+    setProjects(prev => [newProj, ...prev]);
+    setActiveProjectId(newId);
     setStage(1);
     setCurrentPlan(null);
     setCurrentView('chat');
-    setMessages([
-      {
-        id: 'welcome-msg',
-        sender: 'ai',
-        content: `Welcome to Roblox AI Studio! I am your AI Luau game architect powered by Mistral AI (Codestral & Pixtral).\n\nYou can chat freely, upload images or screenshots, ask Luau scripting questions, or describe any Roblox game to build. I will architect the complete client-server project structure, Luau scripts, and data systems with high performance.`,
-        timestamp: Date.now()
-      }
-    ]);
+    setMessages(newProj.chatHistory);
+    setActiveFilePath('');
+    setOpenTabs([]);
   };
 
   const handleDuplicateProject = (project: Project) => {
