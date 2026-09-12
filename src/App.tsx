@@ -20,12 +20,42 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.filter(p => p && p.id && p.id !== 'anime-sim-01');
         }
       } catch (e) {}
     }
-    return [];
+    // Default to Murder vs Sheriff template
+    const defaultTemplate = GAME_TEMPLATES[0];
+    const defaultProj: Project = {
+      id: 'proj-murder-sheriff-default',
+      name: defaultTemplate.name,
+      description: defaultTemplate.description,
+      stage: 4,
+      plan: defaultTemplate.plan,
+      lastModified: Date.now(),
+      files: defaultTemplate.files,
+      previewElements: defaultTemplate.previewElements,
+      validationIssues: [],
+      chatHistory: [
+        {
+          id: 'welcome-msg',
+          sender: 'ai',
+          content: `Welcome to Murder vs Sheriff! Place ID: 72554133670565 | Universe ID: 10583605757.\n\nThis complete MVP includes 1v1, 2v2, 4v4 matchmaking, Gun & Knife combat systems with server-side validation, spectator mode, results screen, and Roblox Open Cloud publishing.`,
+          timestamp: Date.now()
+        }
+      ],
+      robloxConfig: {
+        universeId: '10583605757',
+        placeId: '72554133670565',
+        autoCreatePlace: true,
+        status: 'READY',
+        apiKeyConfigured: false,
+        lastPublishMessage: 'Murder vs Sheriff pre-configured and ready to publish.',
+        lastPublishedAt: null
+      }
+    };
+    return [defaultProj];
   });
 
   const [activeProjectId, setActiveProjectId] = useState<string>(() => {
@@ -37,7 +67,7 @@ export default function App() {
         if (valid.length > 0) return valid[0].id;
       } catch (e) {}
     }
-    return '';
+    return 'proj-murder-sheriff-default';
   });
 
   const [apiSettings, setApiSettings] = useState<ApiSettings>(() => {
@@ -786,10 +816,10 @@ You can chat freely, upload images or screenshots, ask Luau scripting questions,
       validationIssues: [],
       chatHistory: [],
       robloxConfig: {
-        universeId: '',
-        placeId: '',
+        universeId: template.id === 'murder-vs-sheriff' ? '10583605757' : '',
+        placeId: template.id === 'murder-vs-sheriff' ? '72554133670565' : '',
         autoCreatePlace: true,
-        status: 'NEEDS_CONFIGURATION',
+        status: template.id === 'murder-vs-sheriff' ? 'READY' : 'NEEDS_CONFIGURATION',
         apiKeyConfigured: false,
         lastPublishMessage: 'Initialized from template: ' + template.name,
         lastPublishedAt: null

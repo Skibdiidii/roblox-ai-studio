@@ -14,6 +14,66 @@ export interface GameTemplate {
 
 export const GAME_TEMPLATES: GameTemplate[] = [
   {
+    id: 'murder-vs-sheriff',
+    name: 'Murder vs Sheriff',
+    genre: 'PvP Combat / Action',
+    badge: 'Featured',
+    description: 'Competitive 1v1, 2v2, and 4v4 team elimination game. Choose your role: Murderer with Knife or Sheriff with Gun.',
+    previewColor: '#e11d48',
+    previewElements: [
+      { id: '1', name: 'Arena Floor', type: 'arena', position: [0, 0, 0], size: [80, 1, 80], color: '#1e293b', shape: 'box' },
+      { id: '2', name: 'Murderer Spawn 1', type: 'spawn', position: [-30, 1, -30], size: [6, 0.4, 6], color: '#e11d48', shape: 'box', label: 'Murderer Base A' },
+      { id: '3', name: 'Sheriff Spawn 1', type: 'spawn', position: [30, 1, -30], size: [6, 0.4, 6], color: '#3b82f6', shape: 'box', label: 'Sheriff Base A' },
+      { id: '4', name: 'Central Pillar', type: 'building', position: [0, 5, 0], size: [8, 10, 8], color: '#334155', shape: 'cylinder', label: 'Cover Monument' }
+    ],
+    plan: {
+      title: 'Murder vs Sheriff',
+      genre: 'PvP Multiplayer',
+      concept: 'Competitive team elimination arena with Knife vs Gun combat and matchmaking for 1v1, 2v2, and 4v4.',
+      gameplayLoop: [
+        'Select mode (1v1, 2v2, 4v4) from lobby',
+        'Enter matchmaking queue',
+        'Assigned role: Murderer (Knife) or Sheriff (Gun)',
+        '3-second countdown followed by round start',
+        'Eliminate opposing team to win'
+      ],
+      gameSystems: [
+        { name: 'MatchmakingService', description: 'Queues for 1v1, 2v2, 4v4 with validation', files: ['ServerScriptService/Services/MatchmakingService.server.lua'] },
+        { name: 'RoundService', description: 'Team assignment, round states, win conditions', files: ['ServerScriptService/Services/RoundService.server.lua'] },
+        { name: 'CombatService', description: 'Server-authoritative raycast gun and knife validation', files: ['ServerScriptService/Services/CombatService.server.lua'] }
+      ],
+      requiredScripts: [
+        { path: 'ServerScriptService/ServerMain.server.lua', purpose: 'Server initialization', scriptType: 'server' },
+        { path: 'ReplicatedStorage/Shared/WeaponConfig.lua', purpose: 'Weapon stats configuration', scriptType: 'shared' }
+      ],
+      requiredUI: [
+        { name: 'MainMenu', description: 'Mode selection and play buttons' },
+        { name: 'CombatHUD', description: 'Health, Weapon slots, and Ammo count' }
+      ],
+      remotes: [
+        { name: 'QueueAction', type: 'RemoteEvent', purpose: 'Join/leave queue' },
+        { name: 'FireWeapon', type: 'RemoteEvent', purpose: 'Server-validated gun shot' }
+      ],
+      dataStores: [{ name: 'PlayerStats', keys: ['Wins', 'Losses', 'Eliminations', 'Deaths'] }],
+      mapRequirements: { name: 'Neon Metro Arena', description: 'Urban combat arena', elements: [] },
+      npcRequirements: [],
+      configurationValues: [
+        { key: 'UNIVERSE_ID', value: 10583605757, description: 'Universe ID' },
+        { key: 'PLACE_ID', value: 72554133670565, description: 'Place ID' }
+      ]
+    },
+    files: {
+      'ServerScriptService/ServerMain.server.lua': {
+        path: 'ServerScriptService/ServerMain.server.lua',
+        name: 'ServerMain.server.lua',
+        content: `-- [ServerMain.server.lua]
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+print("[Murder vs Sheriff] Server initialized for Universe 10583605757, Place 72554133670565")
+`
+      }
+    }
+  },
+  {
     id: 'anime-simulator',
     name: 'Anime Simulator',
     genre: 'Simulator',
